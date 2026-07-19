@@ -27,11 +27,16 @@ SCRIPTS = {}
 
 def load_scripts():
     SCRIPTS.clear()
-    for fn in os.listdir(SCRIPTS_DIR):
-        if fn.endswith(".json"):
-            with open(os.path.join(SCRIPTS_DIR, fn), encoding="utf-8") as f:
-                data = json.load(f)
-                SCRIPTS[data["id"]] = data
+    # scripts/ 为公开原创剧本；scripts_private/ 存放仅本地使用的剧本（不入 git，避免商业剧本外流）
+    dirs = [SCRIPTS_DIR, os.path.join(BASE_DIR, "scripts_private")]
+    for d in dirs:
+        if not os.path.isdir(d):
+            continue
+        for fn in os.listdir(d):
+            if fn.endswith(".json"):
+                with open(os.path.join(d, fn), encoding="utf-8") as f:
+                    data = json.load(f)
+                    SCRIPTS[data["id"]] = data
 
 # ---------------- 房间状态 ----------------
 

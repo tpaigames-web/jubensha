@@ -61,6 +61,8 @@ input:focus { border-color:#d9b45b; }
 .tag-badge.t悬疑烧脑 { background:#1e2a3f; color:#7fb2e5; border-color:#2c4260; }
 .tag-badge.t硬核 { background:#3a1e2a; color:#e58aa5; border-color:#5a2c40; }
 .tag-badge.t灵异 { background:#2b1e3f; color:#b48ae5; border-color:#422c60; }
+.tag-badge.tAI创作 { background:#12333a; color:#5ecfda; border-color:#1e4f5a; }
+.tag-badge.t改编本 { background:#3a2a12; color:#daa55e; border-color:#5a421e; }
 .empty-tip { text-align:center; color:#8b8898; font-size:13px; padding:16px 0; }
 .script-card {
   border:1px solid #33364a; border-radius:12px; padding:12px;
