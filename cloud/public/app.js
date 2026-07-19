@@ -595,14 +595,44 @@ function renderActionBar() {
   const st = S.st;
   const bar = $("actionbar");
   const me = st.seats.find((s) => s.seatId === st.me.seatId) || {};
+
   if (st.room.phase === "reading" || st.room.phase === "playing") {
     bar.innerHTML = me.ready
       ? `<button class="btn ghost wide" disabled>已就绪，等待其他人…（${st.seats.filter((s) => s.ready).length}/${st.seats.length}）</button>`
       : `<button class="btn primary wide" id="btn-ready">✅ 我读完了 / 准备推进</button>`;
     const b = $("btn-ready");
     if (b) b.onclick = () => { send({ type: "read.progress", progress: 1 }); send({ type: "act.ready" }); };
-  } else bar.innerHTML = "";
+    return;
+  }
+
+  if (st.room.phase === "ended") {
+    // 局已结束：必须给出口，否则刷新会一直回到这个房间
+    bar.innerHTML = `
+      <button class="btn primary grow" id="btn-again">🔄 再来一局</button>
+      <button class="btn ghost" id="btn-leave" style="flex:none">🚪 离开</button>`;
+    $("btn-again").onclick = () => leaveRoom(S.st?.script?.scriptId || null);
+    $("btn-leave").onclick = () => leaveRoom(null);
+    return;
+  }
+
+  bar.innerHTML = "";
 }
+
+/** 离开当前房间：清掉会话与 URL 令牌，回到选本页；带 scriptId 则直接开同一剧本的新局 */
+function leaveRoom(scriptId) {
+  try { if (S.ws) { S.ws.onclose = null; S.ws.close(); } } catch {}
+  S.ws = null; S.st = null; S.token = ""; S.room = ""; S.narration = []; S.connected = false;
+  try { localStorage.removeItem("jbs2"); } catch {}
+  history.replaceState(null, "", location.pathname);
+  banner("");
+  if (scriptId) { show("room"); loadScripts(); createRoom(scriptId); toast("正在开新的一局…", true); }
+  else gotoRoomView();
+}
+
+$("btn-exit").onclick = () => {
+  const ended = S.st?.room?.phase === "ended";
+  if (ended || confirm("确定离开这个房间吗？你的席位会保留，用同样的房号+昵称+PIN 可以回来。")) leaveRoom(null);
+};
 
 // ---------------- 计时器（服务端时钟） ----------------
 setInterval(tickTimer, 1000);
