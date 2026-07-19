@@ -302,10 +302,19 @@ function renderGame() {
   renderBadges();
 }
 
+function authImg(u) {
+  // 图片请求需带席位身份，服务端据此裁决可见性
+  if (!SESSION) return u;
+  return u + "&room=" + encodeURIComponent(SESSION.room) +
+             "&player=" + encodeURIComponent(SESSION.player_id);
+}
+
 function imgGallery(urls) {
   // 扫描图纵向铺开，点击放大（本地/局域网加载快，即时加载更可靠）
-  return `<div class="img-gallery">${urls.map((u, i) =>
-    `<img class="scan-img" src="${u}" data-zoom="${u}" alt="第${i + 1}页">`).join("")}</div>`;
+  return `<div class="img-gallery">${urls.map((u, i) => {
+    const a = authImg(u);
+    return `<img class="scan-img" src="${a}" data-zoom="${a}" alt="第${i + 1}页">`;
+  }).join("")}</div>`;
 }
 
 function renderScriptPanel() {

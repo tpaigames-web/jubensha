@@ -159,6 +159,45 @@ def char_by_id(script, char_id):
             return c
     return None
 
+def _img_rels(urls):
+    """从 /api/img?s=..&p=<rel> 形式的 URL 里取出相对路径集合"""
+    out = set()
+    for u in urls:
+        q = parse_qs(urlparse(u).query)
+        if q.get("p"):
+            out.add(q["p"][0])
+    return out
+
+def allowed_images_for(room, pid):
+    """该席位【此刻】有权查看的图片路径白名单。服务端权威，不给前端裁决权。"""
+    script = SCRIPTS.get(room["script_id"])
+    if not script or script.get("mode") != "images":
+        return set()
+    p = room["players"].get(pid)
+    if not p:
+        return set()
+    allowed = set()
+    started = room["phase_idx"] >= 1
+    ph = room_phase(room)
+    # 公开背景：开局后
+    if started:
+        allowed |= _img_rels(script.get("background_pages", []))
+    # 自己的角色本：仅本人
+    if started and p.get("char"):
+        ch = char_by_id(script, p["char"])
+        if ch:
+            allowed |= _img_rels(ch.get("pages", []))
+    # 线索图：已进行到的轮次（投票/揭晓阶段可回看全部已公开轮次）
+    ri = current_round(room)
+    rounds = script.get("rounds", [])
+    upto = len(rounds) if ph in ("vote", "reveal") else (ri + 1 if ri >= 0 else 0)
+    for r in range(upto):
+        allowed |= _img_rels(rounds[r].get("clue_images", []))
+    # 真相页：仅揭晓阶段
+    if ph == "reveal":
+        allowed |= _img_rels(script.get("truth_pages", []))
+    return allowed
+
 # ---------------- API 处理 ----------------
 
 class ApiError(Exception):
@@ -299,8 +338,12 @@ def api_next_phase(body, qs):
             ch = char_by_id(script, cid)
             lines.append("%s %d票" % (ch["name"] if ch else cid, n))
         sys_msg(room, "投票结果：" + ("，".join(lines) if lines else "无人投票"))
-        murderer = char_by_id(script, script["murderer"])
-        sys_msg(room, "真相揭晓：凶手是「%s」！详见【真相】页。" % murderer["name"])
+        # 图片本没有 murderer 字段（真相在扫描页里），不能假定一定取得到角色
+        murderer = char_by_id(script, script.get("murderer", ""))
+        if murderer:
+            sys_msg(room, "真相揭晓：凶手是「%s」！详见【真相】页。" % murderer["name"])
+        else:
+            sys_msg(room, "真相揭晓：请在【剧本】页查看原版真相与复盘。")
     return {}
 
 def api_search(body, qs):
@@ -565,13 +608,26 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             self._json({"error": "服务器内部错误: %s" % e}, 500)
 
+    def _deny(self, code=403):
+        self.send_response(code); self.send_header("Content-Length", "0"); self.end_headers()
+
     def _serve_image(self, qs):
-        """服务原版图片本的扫描图。仅限 scripts_private/原版/<id>/ 内，严格防目录穿越。"""
+        """服务原版图片本的扫描图。
+        鉴权：必须是该房间的在座玩家，且请求路径在其【当前阶段】的可见白名单内。
+        防目录穿越：路径必须落在 scripts_private/原版/<id>/ 内。"""
         sid = qs.get("s", [""])[0]
         rel = qs.get("p", [""])[0]
         script = SCRIPTS.get(sid)
         if not script or script.get("mode") != "images" or not rel:
-            self.send_response(404); self.send_header("Content-Length", "0"); self.end_headers(); return
+            return self._deny(404)
+        # 身份与权限校验（服务端权威）
+        with LOCK:
+            room = ROOMS.get(qs.get("room", [""])[0])
+            pid = qs.get("player", [""])[0]
+            if not room or room["script_id"] != sid:
+                return self._deny(403)
+            if rel not in allowed_images_for(room, pid):
+                return self._deny(403)
         base = os.path.join(IMG_ROOT, sid)
         fp = os.path.normpath(os.path.join(base, rel))
         if not fp.startswith(base) or not os.path.isfile(fp):
