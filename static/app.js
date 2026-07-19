@@ -72,25 +72,56 @@ function clearSession() { SESSION = null; localStorage.removeItem("jbs_session")
 
 // ---------- 首页 ----------
 
+const FILTER = { players: "全部", tag: "全部" };
+const TAG_ORDER = ["新手", "欢乐", "悬疑烧脑", "硬核", "灵异", "古风", "现代", "民国"];
+
+function renderFilters() {
+  const counts = [...new Set(SCRIPTS.map(s => s.players))].sort((a, b) => a - b);
+  const seen = new Set(SCRIPTS.flatMap(s => s.tags || []));
+  const tags = TAG_ORDER.filter(t => seen.has(t)).concat([...seen].filter(t => !TAG_ORDER.includes(t)));
+  $("filter-players").innerHTML = ["全部", ...counts.map(n => n + "人")].map(v =>
+    `<button class="chip ${FILTER.players === v ? "on" : ""}" data-fp="${v}">${v}</button>`).join("");
+  $("filter-tags").innerHTML = ["全部", ...tags].map(v =>
+    `<button class="chip ${FILTER.tag === v ? "on" : ""}" data-ft="${esc(v)}">${esc(v)}</button>`).join("");
+}
+
+function renderScriptList() {
+  renderFilters();
+  const list = SCRIPTS.filter(s =>
+    (FILTER.players === "全部" || s.players + "人" === FILTER.players) &&
+    (FILTER.tag === "全部" || (s.tags || []).includes(FILTER.tag)));
+  $("script-list").innerHTML = list.length ? list.map(s => `
+    <div class="script-card" data-id="${s.id}">
+      <span class="sc-go">创建 ›</span>
+      <div class="sc-title">《${esc(s.title)}》</div>
+      <div class="sc-tag">${esc(s.tagline)}</div>
+      <div style="margin:4px 0 3px">${(s.tags || []).map(t =>
+        `<span class="tag-badge t${esc(t)}">${esc(t)}</span>`).join("")}</div>
+      <div class="sc-meta">${s.players}人本 · ${esc(s.difficulty)} · ${esc(s.duration)}</div>
+    </div>`).join("") : '<div class="empty-tip">这个分类下暂时没有剧本～</div>';
+}
+
 async function initHome() {
   showView("home");
   const saved = localStorage.getItem("jbs_name");
   if (saved) $("home-name").value = saved;
   try {
     SCRIPTS = (await api("scripts")).scripts;
-    $("script-list").innerHTML = SCRIPTS.map(s => `
-      <div class="script-card" data-id="${s.id}">
-        <span class="sc-go">创建 ›</span>
-        <div class="sc-title">《${esc(s.title)}》</div>
-        <div class="sc-tag">${esc(s.tagline)}</div>
-        <div class="sc-meta">${s.players}人本 · ${esc(s.difficulty)} · ${esc(s.duration)}</div>
-      </div>`).join("");
-    document.querySelectorAll(".script-card").forEach(el =>
-      el.addEventListener("click", () => createRoom(el.dataset.id)));
+    renderScriptList();
   } catch (e) {
     $("script-list").textContent = "剧本加载失败：" + e.message;
   }
 }
+
+// 首页事件委托：筛选chip + 剧本卡片（内容会重渲染，监听器只挂一次）
+document.getElementById("view-home").addEventListener("click", e => {
+  const fp = e.target.closest("[data-fp]");
+  if (fp) { FILTER.players = fp.dataset.fp; renderScriptList(); return; }
+  const ft = e.target.closest("[data-ft]");
+  if (ft) { FILTER.tag = ft.dataset.ft; renderScriptList(); return; }
+  const card = e.target.closest(".script-card");
+  if (card) createRoom(card.dataset.id);
+});
 
 function myName() {
   const name = $("home-name").value.trim();

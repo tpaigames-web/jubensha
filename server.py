@@ -134,7 +134,7 @@ def api_scripts(body, qs):
     return {"scripts": [{
         "id": s["id"], "title": s["title"], "tagline": s["tagline"],
         "players": len(s["characters"]), "difficulty": s.get("difficulty", ""),
-        "duration": s.get("duration", ""),
+        "duration": s.get("duration", ""), "tags": s.get("tags", []),
     } for s in SCRIPTS.values()]}
 
 def api_create(body, qs):
