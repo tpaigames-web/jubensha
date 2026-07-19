@@ -16,3 +16,9 @@ class_name = "RoomDO"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RoomDO"]
+
+# 文案包以文本形式打进 Worker 包体（不进 public/，因此不可被公开下载）
+[[rules]]
+type = "Text"
+globs = ["**/*.pack"]
+fallthrough = true

@@ -1,0 +1,42 @@
+{
+  "scriptId": "fasttest",
+  "schemaVersion": 1,
+  "meta": { "titleKey": "meta.title", "players": 2, "durationMin": 1, "type": "timer_probe" },
+  "characters": [
+    { "id": "P1", "nameKey": "char.P1.name", "briefKey": "char.P1.brief" },
+    { "id": "P2", "nameKey": "char.P2.name", "briefKey": "char.P2.brief" }
+  ],
+  "acts": [
+    {
+      "id": "act1",
+      "durationMin": 0.15,
+      "openingNarrationKey": "nar.act1.open",
+      "closingNarrationKey": "nar.act1.close",
+      "scriptKeys": { "P1": "script.act1.P1", "P2": "script.act1.P2" },
+      "locations": ["loc.counter"],
+      "searchQuota": { "perSeat": 1 },
+      "advance": { "type": "all_ready_or_timeout", "requires": [], "timeoutMin": 0.15 },
+      "mechanics": [],
+      "hints": [{ "afterMin": 0.05, "narrationKey": "nar.act1.hint1" }]
+    },
+    {
+      "id": "act2",
+      "durationMin": 0.15,
+      "openingNarrationKey": "nar.act2.open",
+      "closingNarrationKey": "nar.act2.close",
+      "scriptKeys": { "P1": "script.act2.P1", "P2": "script.act2.P2" },
+      "locations": ["loc.stove"],
+      "searchQuota": { "perSeat": 1 },
+      "advance": { "type": "all_ready_or_timeout", "requires": [], "timeoutMin": 0.15 },
+      "mechanics": [],
+      "hints": []
+    }
+  ],
+  "clues": [
+    { "id": "c.f1.01", "act": "act1", "location": "loc.counter", "contentKey": "clue.a1.01", "visibility": { "type": "public" } },
+    { "id": "c.f2.01", "act": "act2", "location": "loc.stove", "contentKey": "clue.a2.01", "visibility": { "type": "public" } }
+  ],
+  "votes": [],
+  "mechanics": [],
+  "debrief": { "segments": [{ "id": "d1", "contentKey": "debrief.1", "unlock": "manual" }] }
+}

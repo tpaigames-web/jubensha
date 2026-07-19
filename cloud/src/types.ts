@@ -13,12 +13,21 @@ export interface RoomState {
   roomId: string;
   scriptId: string;
   phase: Phase;
+  /** 当前幕下标；lobby 为 -1 */
   actIndex: number;
   actStartedAt: number | null;
   actEndsAt: number | null;
   seatCount: number;
   createdAt: number;
   config: Record<string, unknown>;
+  unlockedClues: { clueId: string; bySeatId: string; at: number }[];
+  /** 已下发的播报 key（重连时回放） */
+  narrationLog: { key: string; at: number }[];
+  /** 已触发过的防卡车提示 key，避免重复放 */
+  hintsFired: string[];
+  debriefUnlocked: string[];
+  /** voteId → (seatId → choice)。保留完整票型，结算按票型分支 */
+  votes: Record<string, Record<string, string>>;
 }
 
 export interface Seat {
@@ -32,6 +41,8 @@ export interface Seat {
   characterId: string | null;
   readProgress: number;
   ready: boolean;
+  /** actIndex → 已用搜证次数 */
+  searchUsed: Record<number, number>;
   privateState: Record<string, unknown>;
   joinedAt: number;
   lastSeenAt: number;
@@ -61,6 +72,9 @@ export type ClientMsg =
   | { type: "character.pick"; characterId?: string; random?: boolean }
   | { type: "read.progress"; progress: number }
   | { type: "act.ready" }
+  | { type: "clue.unlock"; locationId: string }
+  | { type: "vote.cast"; voteId: string; choice: string }
+  | { type: "debrief.next" }
   | { type: "ping" };
 
 // ---------- Server → Client ----------
@@ -83,6 +97,30 @@ export interface SnapshotFull {
     privateState: Record<string, unknown>;
   };
   seats: SeatPublic[];
+  script: {
+    scriptId: string;
+    titleKey: string;
+    characters: { id: string; nameKey: string; briefKey: string }[];
+    actCount: number;
+    locations: string[];
+    searchQuota: number;
+    searchUsed: number;
+    myScriptKeys: string[];
+  };
+  clues: { id: string; contentKey: string; location: string; private: boolean }[];
+  vote: {
+    voteId: string;
+    mode: string;
+    promptKey: string;
+    options: { id: string; labelKey: string }[];
+    myChoice: string | null;
+    castCount: number;
+    ballots?: Record<string, string>;
+  } | null;
+  debrief: { id: string; contentKey: string }[];
+  narration: { key: string; at: number; text: string }[];
+  /** key → 正文。只含本席位【此刻有权】解析的 key（已过 entitledKeys 闸门） */
+  content: Record<string, string>;
   /** 仅首次认领时下发一次，客户端需自行持久化 */
   seatToken?: string;
 }

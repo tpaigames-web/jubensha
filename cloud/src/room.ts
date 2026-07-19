@@ -1,28 +1,28 @@
 /**
  * RoomDO —— 一个房间一个 Durable Object 实例。
  *
- * 阶段 1 交付：Seat 身份模型
- *   - 身份挂在席位上，不挂在连接/设备上
- *   - seatToken（32字节随机）只存哈希，明文仅签发时返回一次
- *   - 三级恢复：token → (客户端 localStorage/URL) → 房号+昵称+PIN 兜底
- *   - 广播按 seatId 路由：一个席位的多条连接全部推送
- *   - 席位互斥提示：新设备认领时通知该席位的旧连接
- *   - 无「房主」概念
+ * 已交付：
+ *  阶段1 Seat 身份模型（令牌/PIN/三级恢复/按 seatId 广播/席位互斥/无房主）
+ *  阶段3 服务端权威可见性（全部下发过 visibility 闸门）
+ *  阶段4 运行时引擎（状态机 / 服务端计时 / 主持人播报 / 防卡车提示 / 阅读进度 / 搜证 / 投票 / 复盘）
  *
- * 休眠安全：连接↔席位映射存在 WebSocket attachment 里（serializeAttachment），
- * DO 休眠后仍能还原，绝不依赖内存变量。
+ * 休眠安全：连接↔席位映射存在 WebSocket attachment；计时用 DO Alarm，
+ * 二者都不依赖内存变量，实例被回收后行为不变。
  *
- * 注意：本文件不接触任何剧本正文，只处理 id 与 key。
+ * 【防剧透】本文件只处理 id 与 key，绝不内联正文；所有正文经 content.resolveMany
+ * 在通过 entitledKeys 闸门之后才解析。
  */
 
 import {
   ClientMsg, ConnAttachment, ERR, Phase, RoomState, Seat, SeatPublic, SnapshotFull,
 } from "./types";
 import { hashPin, hashToken, newId, newSalt, newSeatToken, timingSafeEqual } from "./crypto";
+import { getSkeleton, hasSkeleton, Skeleton } from "./skeleton";
+import { getContent } from "./content";
+import { entitledKeys, searchCandidates, visibleClues, VisibilityCtx } from "./visibility";
 
 const K_ROOM = "room";
 const K_SEATS = "seats";
-const DEFAULT_SEAT_COUNT = 4;
 
 type SeatMap = Record<string, Seat>;
 
@@ -33,41 +33,53 @@ export class RoomDO implements DurableObject {
     this.ctx = ctx;
   }
 
-  // ---------- 存储 ----------
+  // ================= 存储 =================
 
-  private async getRoom(roomId: string): Promise<RoomState> {
+  private async getRoom(roomId: string, scriptId = "placeholder"): Promise<RoomState> {
     const r = await this.ctx.storage.get<RoomState>(K_ROOM);
     if (r) return r;
+    const sk = getSkeleton(hasSkeleton(scriptId) ? scriptId : "placeholder");
     const fresh: RoomState = {
       roomId,
-      scriptId: "placeholder",
+      scriptId: sk.scriptId,
       phase: "lobby",
-      actIndex: 0,
+      actIndex: -1,
       actStartedAt: null,
       actEndsAt: null,
-      seatCount: DEFAULT_SEAT_COUNT,
+      seatCount: sk.meta.players,
       createdAt: Date.now(),
       config: {},
+      unlockedClues: [],
+      narrationLog: [],
+      hintsFired: [],
+      debriefUnlocked: [],
+      votes: {},
     };
     await this.ctx.storage.put(K_ROOM, fresh);
     return fresh;
   }
 
-  /** 消息处理阶段读取房间：此时房间必然已由 fetch 建好，不再用默认房号兜底 */
   private async mustGetRoom(): Promise<RoomState | null> {
     return (await this.ctx.storage.get<RoomState>(K_ROOM)) ?? null;
+  }
+
+  private async putRoom(r: RoomState): Promise<void> {
+    await this.ctx.storage.put(K_ROOM, r);
   }
 
   private async getSeats(): Promise<SeatMap> {
     return (await this.ctx.storage.get<SeatMap>(K_SEATS)) ?? {};
   }
 
-  /** 每次变更立刻落盘，不依赖定时快照 */
   private async putSeats(seats: SeatMap): Promise<void> {
     await this.ctx.storage.put(K_SEATS, seats);
   }
 
-  // ---------- 连接 ↔ 席位 ----------
+  private sk(room: RoomState): Skeleton {
+    return getSkeleton(room.scriptId);
+  }
+
+  // ================= 连接 ↔ 席位 =================
 
   private attachmentOf(ws: WebSocket): ConnAttachment | null {
     try {
@@ -94,17 +106,14 @@ export class RoomDO implements DurableObject {
     try {
       ws.send(JSON.stringify(payload));
     } catch {
-      /* 连接已失效，由 close 回调清理 */
+      /* 连接失效，由 close 清理 */
     }
   }
 
-  /** 广播给房间内所有已入座的连接 */
-  private broadcast(payload: unknown, exceptSeatId?: string): void {
+  private broadcast(payload: unknown): void {
     const data = JSON.stringify(payload);
     for (const ws of this.ctx.getWebSockets()) {
-      const a = this.attachmentOf(ws);
-      if (!a?.seatId) continue;
-      if (exceptSeatId && a.seatId === exceptSeatId) continue;
+      if (!this.attachmentOf(ws)?.seatId) continue;
       try {
         ws.send(data);
       } catch {
@@ -113,12 +122,21 @@ export class RoomDO implements DurableObject {
     }
   }
 
-  /** 按 seatId 路由：该席位的所有连接都推 */
   private sendToSeat(seatId: string, payload: unknown): void {
     for (const ws of this.socketsOfSeat(seatId)) this.send(ws, payload);
   }
 
-  // ---------- 视图 ----------
+  // ================= 视图与快照 =================
+
+  private ctxFor(room: RoomState, seat: Seat): VisibilityCtx {
+    return {
+      phase: room.phase,
+      actIndex: room.actIndex,
+      characterId: seat.characterId,
+      unlockedClueIds: room.unlockedClues.map((u) => u.clueId),
+      debriefUnlocked: room.debriefUnlocked,
+    };
+  }
 
   private seatsPublic(seats: SeatMap): SeatPublic[] {
     const online = this.onlineSeatIds();
@@ -134,7 +152,26 @@ export class RoomDO implements DurableObject {
       }));
   }
 
+  /** 快照：所有正文都经 entitledKeys 闸门后才解析 */
   private snapshot(room: RoomState, seats: SeatMap, me: Seat, seatToken?: string): SnapshotFull {
+    const sk = this.sk(room);
+    const vctx = this.ctxFor(room, me);
+    const allowed = entitledKeys(sk, vctx);
+    const content = getContent(room.scriptId).resolveMany([...allowed]);
+
+    const act = room.actIndex >= 0 ? sk.acts[room.actIndex] : null;
+    const myClues = visibleClues(sk, vctx).map((c) => ({
+      id: c.id,
+      contentKey: c.contentKey,
+      location: c.location,
+      private: c.visibility.type === "private",
+    }));
+
+    // 已下发过的播报（重连时补齐），同样只回放本席位有权看到的
+    const narration = room.narrationLog
+      .filter((n) => allowed.has(n.key) || n.key.startsWith("nar.") || n.key.startsWith("end."))
+      .map((n) => ({ key: n.key, at: n.at, text: getContent(room.scriptId).resolve(n.key) ?? "" }));
+
     const snap: SnapshotFull = {
       type: "snapshot.full",
       room: {
@@ -154,27 +191,298 @@ export class RoomDO implements DurableObject {
         privateState: me.privateState,
       },
       seats: this.seatsPublic(seats),
+      script: {
+        scriptId: sk.scriptId,
+        titleKey: sk.meta.titleKey,
+        characters: sk.characters.map((c) => ({ id: c.id, nameKey: c.nameKey, briefKey: c.briefKey })),
+        actCount: sk.acts.length,
+        /** 仅当前幕的可搜地点与配额 */
+        locations: act ? act.locations : [],
+        searchQuota: act ? act.searchQuota.perSeat : 0,
+        searchUsed: me.searchUsed?.[room.actIndex] ?? 0,
+        /** 仅已开放幕的自己剧本 key */
+        myScriptKeys: me.characterId
+          ? sk.acts
+              .slice(0, room.phase === "lobby" ? 0 : room.phase === "reading" ? 1 : room.actIndex + 1)
+              .map((a) => a.scriptKeys[me.characterId!])
+              .filter(Boolean)
+          : [],
+      },
+      clues: myClues,
+      vote: this.voteView(room, sk, me),
+      debrief:
+        room.phase === "debrief" || room.phase === "ended"
+          ? sk.debrief.segments
+              .filter((s) => room.debriefUnlocked.includes(s.id))
+              .map((s) => ({ id: s.id, contentKey: s.contentKey }))
+          : [],
+      narration,
+      content,
     };
     if (seatToken) snap.seatToken = seatToken;
     return snap;
   }
 
-  /** 席位名册变化后，让所有人刷新 seats 视图 */
+  private voteView(room: RoomState, sk: Skeleton, me: Seat) {
+    const act = room.actIndex >= 0 ? sk.acts[room.actIndex] : null;
+    if (!act) return null;
+    const v = sk.votes.find((x) => x.act === act.id);
+    if (!v) return null;
+    const ballots = room.votes[v.id] ?? {};
+    return {
+      voteId: v.id,
+      mode: v.mode,
+      promptKey: v.promptKey,
+      options: v.options.map((o) => ({ id: o.id, labelKey: o.labelKey })),
+      myChoice: ballots[me.seatId] ?? null,
+      castCount: Object.keys(ballots).length,
+      /** 实名公开模式才回传完整票型 */
+      ballots: v.mode === "single_public" ? ballots : undefined,
+    };
+  }
+
+  private async pushSnapshotAll(room: RoomState, seats: SeatMap): Promise<void> {
+    for (const seat of Object.values(seats)) {
+      this.sendToSeat(seat.seatId, this.snapshot(room, seats, seat));
+    }
+  }
+
   private broadcastSeats(seats: SeatMap): void {
     this.broadcast({ type: "seats.updated", seats: this.seatsPublic(seats), serverNow: Date.now() });
   }
 
-  // ---------- 入座 / 恢复 ----------
+  // ================= 主持人播报 =================
+
+  /** 记录并推送播报。正文在此刻解析（播报对全体可见） */
+  private async narrate(room: RoomState, key: string, style = "normal"): Promise<void> {
+    const text = getContent(room.scriptId).resolve(key);
+    if (text === null) return;
+    room.narrationLog.push({ key, at: Date.now() });
+    this.broadcast({ type: "narration", key, text, style, serverNow: Date.now() });
+  }
+
+  // ================= 计时器（DO Alarm） =================
+
+  /** 下一次唤醒 = min(下一条未触发的提示, 本幕截止) */
+  private async scheduleAlarm(room: RoomState): Promise<void> {
+    if (room.phase !== "playing" || room.actIndex < 0 || !room.actStartedAt) {
+      await this.ctx.storage.deleteAlarm();
+      return;
+    }
+    const act = this.sk(room).acts[room.actIndex];
+    const times: number[] = [];
+    for (const h of act.hints) {
+      const at = room.actStartedAt + h.afterMin * 60_000;
+      if (!room.hintsFired.includes(h.narrationKey) && at > Date.now()) times.push(at);
+    }
+    if (room.actEndsAt && room.actEndsAt > Date.now()) times.push(room.actEndsAt);
+    if (!times.length) {
+      await this.ctx.storage.deleteAlarm();
+      return;
+    }
+    await this.ctx.storage.setAlarm(Math.min(...times));
+  }
+
+  /** DO 唤醒：放提示 / 幕超时推进。休眠期间也会准时触发 */
+  async alarm(): Promise<void> {
+    const room = await this.mustGetRoom();
+    if (!room || room.phase !== "playing" || room.actIndex < 0 || !room.actStartedAt) return;
+    const seats = await this.getSeats();
+    const act = this.sk(room).acts[room.actIndex];
+    const now = Date.now();
+
+    // 防卡车提示
+    for (const h of act.hints) {
+      const at = room.actStartedAt + h.afterMin * 60_000;
+      if (now >= at && !room.hintsFired.includes(h.narrationKey)) {
+        room.hintsFired.push(h.narrationKey);
+        await this.narrate(room, h.narrationKey, "hint");
+      }
+    }
+
+    // 幕超时
+    if (room.actEndsAt && now >= room.actEndsAt && act.advance.type !== "all_ready") {
+      await this.putRoom(room);
+      return this.advance(room, seats, "timeout");
+    }
+
+    await this.putRoom(room);
+    await this.scheduleAlarm(room);
+    await this.pushSnapshotAll(room, seats);
+  }
+
+  // ================= 状态机 =================
+
+  private allSeated(seats: SeatMap, room: RoomState): boolean {
+    return Object.keys(seats).length >= room.seatCount;
+  }
+
+  private allPickedCharacter(seats: SeatMap): boolean {
+    return Object.values(seats).every((s) => !!s.characterId);
+  }
+
+  private allRead(seats: SeatMap): boolean {
+    return Object.values(seats).every((s) => s.readProgress >= 0.95 || s.ready);
+  }
+
+  private allReady(seats: SeatMap): boolean {
+    return Object.values(seats).every((s) => s.ready);
+  }
+
+  private voteDone(room: RoomState, sk: Skeleton, seats: SeatMap): boolean {
+    const act = sk.acts[room.actIndex];
+    const v = sk.votes.find((x) => x.act === act?.id);
+    if (!v) return true;
+    return Object.keys(room.votes[v.id] ?? {}).length >= Object.keys(seats).length;
+  }
+
+  /** lobby → reading：坐满且全员选定角色（随机意向由此统一指派） */
+  private async tryStart(room: RoomState, seats: SeatMap): Promise<boolean> {
+    if (room.phase !== "lobby") return false;
+    if (!this.allSeated(seats, room)) return false;
+
+    const sk = this.sk(room);
+    const wantRandom = Object.values(seats).filter(
+      (s) => !s.characterId && s.privateState?.wantRandom
+    );
+    const undecided = Object.values(seats).filter((s) => !s.characterId && !s.privateState?.wantRandom);
+    if (undecided.length) return false;
+
+    // 引擎统一随机指派，避免与客户端各自随机打架
+    const taken = new Set(Object.values(seats).map((s) => s.characterId).filter(Boolean) as string[]);
+    const free = sk.characters.map((c) => c.id).filter((id) => !taken.has(id));
+    for (let i = free.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [free[i], free[j]] = [free[j], free[i]];
+    }
+    for (const s of wantRandom) s.characterId = free.pop() ?? null;
+
+    room.phase = "reading";
+    room.actIndex = 0;
+    for (const s of Object.values(seats)) {
+      s.ready = false;
+      s.readProgress = 0;
+    }
+    await this.putSeats(seats);
+    await this.putRoom(room);
+    return true;
+  }
+
+  /** 进入某一幕：重置就绪、开计时、放开场播报 */
+  private async enterAct(room: RoomState, seats: SeatMap, index: number): Promise<void> {
+    const sk = this.sk(room);
+    const act = sk.acts[index];
+    room.phase = "playing";
+    room.actIndex = index;
+    room.actStartedAt = Date.now();
+    room.actEndsAt = Date.now() + act.durationMin * 60_000;
+    for (const s of Object.values(seats)) {
+      s.ready = false;
+      s.searchUsed = { ...(s.searchUsed ?? {}), [index]: 0 };
+    }
+    await this.putSeats(seats);
+    await this.narrate(room, act.openingNarrationKey, "act-open");
+    await this.putRoom(room);
+    await this.scheduleAlarm(room);
+    this.broadcast({
+      type: "act.changed",
+      actIndex: index,
+      actEndsAt: room.actEndsAt,
+      serverNow: Date.now(),
+    });
+  }
+
+  /** 推进：收束播报 → 下一幕 / 复盘 */
+  private async advance(room: RoomState, seats: SeatMap, reason: string): Promise<void> {
+    const sk = this.sk(room);
+
+    if (room.phase === "reading") {
+      await this.enterAct(room, seats, 0);
+      await this.pushSnapshotAll(room, seats);
+      return;
+    }
+
+    if (room.phase !== "playing") return;
+
+    const act = sk.acts[room.actIndex];
+    await this.narrate(room, act.closingNarrationKey, "act-close");
+
+    if (room.actIndex + 1 < sk.acts.length) {
+      await this.enterAct(room, seats, room.actIndex + 1);
+    } else {
+      // 最终投票结算 → 复盘
+      await this.settleFinalVote(room, sk, seats);
+      room.phase = "debrief";
+      room.actEndsAt = null;
+      await this.ctx.storage.deleteAlarm();
+      await this.putRoom(room);
+      this.broadcast({ type: "phase.changed", phase: room.phase, serverNow: Date.now() });
+    }
+    await this.pushSnapshotAll(room, seats);
+    this.broadcast({ type: "advanced", reason, serverNow: Date.now() });
+  }
+
+  /** 按完整票型分支结算 */
+  private async settleFinalVote(room: RoomState, sk: Skeleton, seats: SeatMap): Promise<void> {
+    const act = sk.acts[room.actIndex];
+    const v = sk.votes.find((x) => x.act === act?.id);
+    if (!v) return;
+    const ballots = room.votes[v.id] ?? {};
+    const choices = Object.values(ballots);
+    if (!choices.length) return;
+
+    const uniq = [...new Set(choices)];
+    let match = "split";
+    if (uniq.length === 1) match = "unanimous_" + uniq[0];
+
+    const branch =
+      v.resultBranches.find((b) => b.match === match) ??
+      v.resultBranches.find((b) => b.match === "split");
+    if (branch) await this.narrate(room, branch.narrationKey, "ending");
+  }
+
+  /** 每次可能改变推进条件时调用 */
+  private async checkAdvance(room: RoomState, seats: SeatMap): Promise<void> {
+    const sk = this.sk(room);
+
+    if (room.phase === "lobby") {
+      if (await this.tryStart(room, seats)) {
+        await this.pushSnapshotAll(room, seats);
+        this.broadcast({ type: "phase.changed", phase: room.phase, serverNow: Date.now() });
+      }
+      return;
+    }
+
+    if (room.phase === "reading") {
+      if (this.allRead(seats)) await this.advance(room, seats, "all_read");
+      return;
+    }
+
+    if (room.phase !== "playing") return;
+
+    const act = sk.acts[room.actIndex];
+    const req = act.advance.requires ?? [];
+    const reqOk =
+      (!req.includes("all_read") || this.allRead(seats)) &&
+      (!req.includes("vote_done") || this.voteDone(room, sk, seats));
+
+    if (act.advance.type !== "timeout" && this.allReady(seats) && reqOk) {
+      await this.advance(room, seats, "all_ready");
+    }
+  }
+
+  // ================= 入座 / 恢复 =================
 
   private async bindConnection(ws: WebSocket, seatId: string): Promise<void> {
-    const att: ConnAttachment = { seatId, connId: newId("conn") };
-    ws.serializeAttachment(att);
+    ws.serializeAttachment({ seatId, connId: newId("conn") } satisfies ConnAttachment);
   }
 
   private async claim(ws: WebSocket, room: RoomState, name: string, pin: string) {
     const seats = await this.getSeats();
     const list = Object.values(seats);
-
+    if (room.phase !== "lobby") {
+      return this.send(ws, { type: "error", code: ERR.BAD_INPUT, message: "游戏已开始，无法加入" });
+    }
     if (list.some((s) => s.displayName === name)) {
       return this.send(ws, { type: "error", code: ERR.NAME_TAKEN, message: "这个昵称已经有人用了" });
     }
@@ -193,6 +501,7 @@ export class RoomDO implements DurableObject {
       characterId: null,
       readProgress: 0,
       ready: false,
+      searchUsed: {},
       privateState: {},
       joinedAt: Date.now(),
       lastSeenAt: Date.now(),
@@ -201,9 +510,9 @@ export class RoomDO implements DurableObject {
     await this.putSeats(seats);
     await this.bindConnection(ws, seat.seatId);
 
-    // 明文 token 只在这里返回一次
     this.send(ws, this.snapshot(room, seats, seat, token));
     this.broadcastSeats(seats);
+    await this.checkAdvance(room, seats);
   }
 
   private async resume(ws: WebSocket, room: RoomState, token: string) {
@@ -229,59 +538,53 @@ export class RoomDO implements DurableObject {
     await this.attachToSeat(ws, room, seats, seat);
   }
 
-  /** 认领已存在的席位：先通知旧连接（互斥提示），再绑定新连接 */
   private async attachToSeat(ws: WebSocket, room: RoomState, seats: SeatMap, seat: Seat) {
-    const previous = this.socketsOfSeat(seat.seatId);
-    for (const old of previous) {
-      this.send(old, {
-        type: "seat.elsewhere",
-        message: "你的席位已在其他设备打开",
-        serverNow: Date.now(),
-      });
+    for (const old of this.socketsOfSeat(seat.seatId)) {
+      this.send(old, { type: "seat.elsewhere", message: "你的席位已在其他设备打开", serverNow: Date.now() });
     }
-
     seat.lastSeenAt = Date.now();
     seats[seat.seatId] = seat;
     await this.putSeats(seats);
     await this.bindConnection(ws, seat.seatId);
-
-    // 家庭局不强制踢线：旧连接仍可用，只是知道发生了什么
     this.send(ws, this.snapshot(room, seats, seat));
     this.broadcastSeats(seats);
   }
 
-  // ---------- 席位自身状态 ----------
+  // ================= 席位动作 =================
 
-  private async mutateSeat(
+  private async withSeat(
     ws: WebSocket,
     room: RoomState,
-    fn: (seat: Seat, seats: SeatMap) => void | string
+    fn: (seat: Seat, seats: SeatMap) => Promise<string | void> | string | void
   ) {
     const att = this.attachmentOf(ws);
-    if (!att?.seatId) {
-      return this.send(ws, { type: "error", code: ERR.NOT_SEATED, message: "尚未入座" });
-    }
+    if (!att?.seatId) return this.send(ws, { type: "error", code: ERR.NOT_SEATED, message: "尚未入座" });
     const seats = await this.getSeats();
     const seat = seats[att.seatId];
-    if (!seat) {
-      return this.send(ws, { type: "error", code: ERR.SEAT_NOT_FOUND, message: "席位已不存在" });
-    }
-    const err = fn(seat, seats);
+    if (!seat) return this.send(ws, { type: "error", code: ERR.SEAT_NOT_FOUND, message: "席位已不存在" });
+
+    const err = await fn(seat, seats);
     if (typeof err === "string") {
       return this.send(ws, { type: "error", code: ERR.BAD_INPUT, message: err });
     }
     seat.lastSeenAt = Date.now();
     seats[seat.seatId] = seat;
     await this.putSeats(seats);
-    this.sendToSeat(seat.seatId, this.snapshot(room, seats, seat));
+    await this.putRoom(room);
+    await this.checkAdvance(room, seats);
+    await this.pushSnapshotAll(room, seats);
     this.broadcastSeats(seats);
   }
 
-  // ---------- WebSocket 生命周期 ----------
+  // ================= WebSocket 生命周期 =================
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const room = await this.getRoom(url.searchParams.get("room") ?? "0000");
+    // script 仅在房间首次创建时生效；已存在的房间不会被后来者改剧本
+    const room = await this.getRoom(
+      url.searchParams.get("room") ?? "0000",
+      url.searchParams.get("script") ?? "placeholder"
+    );
     const seats = await this.getSeats();
 
     const pair = new WebSocketPair();
@@ -289,7 +592,7 @@ export class RoomDO implements DurableObject {
     const server = pair[1];
     this.ctx.acceptWebSocket(server);
 
-    // 未入座前只给最小信息：够客户端决定「认领 / 恢复」即可
+    // 未入座前只给最小信息，绝不含任何剧本正文
     this.send(server, {
       type: "hello",
       room: {
@@ -317,6 +620,7 @@ export class RoomDO implements DurableObject {
     if (!room) {
       return this.send(ws, { type: "error", code: ERR.BAD_INPUT, message: "房间状态丢失，请重新连接" });
     }
+    const sk = this.sk(room);
 
     switch (msg.type) {
       case "ping":
@@ -346,33 +650,84 @@ export class RoomDO implements DurableObject {
       }
 
       case "character.pick":
-        return this.mutateSeat(ws, room, (seat, seats) => {
+        return this.withSeat(ws, room, (seat, seats) => {
+          if (room.phase !== "lobby") return "游戏已开始，不能换角色";
           if (msg.random) {
-            seat.characterId = null; // 阶段4由引擎统一随机分配
+            seat.characterId = null;
             seat.privateState = { ...seat.privateState, wantRandom: true };
             return;
           }
           const cid = String(msg.characterId ?? "");
-          if (!cid) return "缺少角色";
-          const taken = Object.values(seats).some(
-            (s) => s.seatId !== seat.seatId && s.characterId === cid
-          );
-          if (taken) return "该角色已被选择";
+          if (!sk.characters.some((c) => c.id === cid)) return "角色不存在";
+          if (Object.values(seats).some((s) => s.seatId !== seat.seatId && s.characterId === cid))
+            return "该角色已被选择";
           seat.characterId = cid;
           seat.privateState = { ...seat.privateState, wantRandom: false };
         });
 
       case "read.progress":
-        return this.mutateSeat(ws, room, (seat) => {
+        return this.withSeat(ws, room, (seat) => {
           const p = Number(msg.progress);
           if (!Number.isFinite(p)) return "进度值非法";
-          // 只允许前进，避免来回滚动把进度刷回去
           seat.readProgress = Math.max(seat.readProgress, Math.min(1, Math.max(0, p)));
         });
 
       case "act.ready":
-        return this.mutateSeat(ws, room, (seat) => {
+        return this.withSeat(ws, room, (seat) => {
           seat.ready = true;
+        });
+
+      case "clue.unlock":
+        return this.withSeat(ws, room, (seat, seats) => {
+          if (room.phase !== "playing") return "当前不是搜证阶段";
+          const act = sk.acts[room.actIndex];
+          const used = seat.searchUsed?.[room.actIndex] ?? 0;
+          if (used >= act.searchQuota.perSeat) return "本幕搜证次数已用完";
+
+          const loc = String(msg.locationId ?? "");
+          const vctx = this.ctxFor(room, seat);
+          const cands = searchCandidates(sk, vctx, loc);
+          if (!act.locations.includes(loc)) return "没有这个地点";
+          if (!cands.length) return "这里已经搜不到新线索了（不消耗次数）";
+
+          const clue = cands[Math.floor(Math.random() * cands.length)];
+          room.unlockedClues.push({ clueId: clue.id, bySeatId: seat.seatId, at: Date.now() });
+          seat.searchUsed = { ...(seat.searchUsed ?? {}), [room.actIndex]: used + 1 };
+
+          // 私有线索只推给有权的席位；公开线索随各自快照下发
+          this.sendToSeat(seat.seatId, {
+            type: "clue.granted",
+            clue: {
+              id: clue.id,
+              contentKey: clue.contentKey,
+              location: clue.location,
+              private: clue.visibility.type === "private",
+            },
+            text: getContent(room.scriptId).resolve(clue.contentKey) ?? "",
+            serverNow: Date.now(),
+          });
+        });
+
+      case "vote.cast":
+        return this.withSeat(ws, room, (seat) => {
+          if (room.phase !== "playing") return "当前不是投票阶段";
+          const act = sk.acts[room.actIndex];
+          const v = sk.votes.find((x) => x.act === act?.id);
+          if (!v || v.id !== String(msg.voteId ?? "")) return "投票不存在";
+          const choice = String(msg.choice ?? "");
+          if (!v.options.some((o) => o.id === choice)) return "选项不存在";
+          room.votes[v.id] = { ...(room.votes[v.id] ?? {}), [seat.seatId]: choice };
+        });
+
+      case "debrief.next":
+        return this.withSeat(ws, room, () => {
+          if (room.phase !== "debrief") return "当前不是复盘阶段";
+          const next = sk.debrief.segments.find((s) => !room.debriefUnlocked.includes(s.id));
+          if (!next) {
+            room.phase = "ended";
+            return;
+          }
+          room.debriefUnlocked.push(next.id);
         });
 
       default:
@@ -387,11 +742,7 @@ export class RoomDO implements DurableObject {
     } catch {
       /* 已关闭 */
     }
-    // 该席位若已无连接，广播在线状态变化
-    if (att?.seatId) {
-      const seats = await this.getSeats();
-      this.broadcastSeats(seats);
-    }
+    if (att?.seatId) this.broadcastSeats(await this.getSeats());
   }
 
   async webSocketError(ws: WebSocket): Promise<void> {
