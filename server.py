@@ -25,6 +25,8 @@ PORT = int(os.environ.get("PORT", "8899"))
 
 SCRIPTS = {}
 
+IMG_ROOT = os.path.join(BASE_DIR, "scripts_private", "原版")
+
 def load_scripts():
     SCRIPTS.clear()
     # scripts/ 为公开原创剧本；scripts_private/ 存放仅本地使用的剧本（不入 git，避免商业剧本外流）
@@ -37,6 +39,45 @@ def load_scripts():
                 with open(os.path.join(d, fn), encoding="utf-8") as f:
                     data = json.load(f)
                     SCRIPTS[data["id"]] = data
+    # 原版图片本：scripts_private/原版/<id>/manifest.json，游戏直接展示扫描原图
+    if os.path.isdir(IMG_ROOT):
+        for name in os.listdir(IMG_ROOT):
+            mf = os.path.join(IMG_ROOT, name, "manifest.json")
+            if os.path.isfile(mf):
+                with open(mf, encoding="utf-8") as f:
+                    m = json.load(f)
+                SCRIPTS[m["id"]] = normalize_image_script(m)
+
+def normalize_image_script(m):
+    """把图片本清单规范成引擎能吃的结构：角色补齐占位字段+pages，rounds补 name。"""
+    def img_url(rel):
+        return "/api/img?s=%s&p=%s" % (m["id"], rel)
+    chars = []
+    for c in m["characters"]:
+        chars.append({
+            "id": c["id"], "name": c["name"],
+            "brief": "原版角色", "public": "（原版扫描剧本，点开查看角色本）",
+            "story": "", "secrets": [], "goals": [],
+            "pages": [img_url(p) for p in c.get("pages", [])],
+        })
+    return {
+        "id": m["id"], "mode": "images",
+        "title": m["title"], "tagline": m.get("tagline", ""),
+        "difficulty": m.get("difficulty", ""), "duration": m.get("duration", ""),
+        "tags": m.get("tags", []), "author": m.get("author", ""),
+        "victim": m.get("victim", ""), "background": m.get("background", ""),
+        "background_pages": [img_url(p) for p in m.get("background_pages", [])],
+        "vote_question": m.get("vote_question", "你认为谁是凶手？"),
+        "murderer": m.get("murderer", ""),  # 原版可留空（真相在扫描页里）
+        "characters": chars,
+        "rounds": [{"name": r.get("name", "第%d轮搜证" % (i + 1)),
+                    "locations": {},
+                    "clue_images": [img_url(p) for p in r.get("clues", [])]}
+                   for i, r in enumerate(m.get("rounds", []))],
+        "truth": "",
+        "truth_pages": [img_url(p) for p in m.get("truth_pages", [])],
+        "search_points": 0,
+    }
 
 # ---------------- 房间状态 ----------------
 
@@ -140,6 +181,7 @@ def api_scripts(body, qs):
         "id": s["id"], "title": s["title"], "tagline": s["tagline"],
         "players": len(s["characters"]), "difficulty": s.get("difficulty", ""),
         "duration": s.get("duration", ""), "tags": s.get("tags", []),
+        "mode": s.get("mode", "text"),
     } for s in SCRIPTS.values()]}
 
 def api_create(body, qs):
@@ -242,7 +284,10 @@ def api_next_phase(body, qs):
         pts = script.get("search_points", 2)
         for pl in room["players"].values():
             pl["search_left"] = pts
-        sys_msg(room, "进入【%s】：每人有 %d 次搜证机会，去各个地点找线索吧！" % (phase_label(room), pts))
+        if script.get("mode") == "images":
+            sys_msg(room, "进入【%s】：本轮线索已公开，请在「线索」页查看。" % phase_label(room))
+        else:
+            sys_msg(room, "进入【%s】：每人有 %d 次搜证机会，去各个地点找线索吧！" % (phase_label(room), pts))
     elif ph == "vote":
         sys_msg(room, "进入投票阶段：请指认你心中的凶手！全员投票后房主可揭晓真相。")
     elif ph == "reveal":
@@ -417,7 +462,16 @@ def api_state(body, qs):
     if me["char"] and started:
         ch = char_by_id(script, me["char"])
         my_char = {"id": ch["id"], "name": ch["name"], "brief": ch["brief"],
-                   "story": ch["story"], "secrets": ch["secrets"], "goals": ch["goals"]}
+                   "story": ch["story"], "secrets": ch["secrets"], "goals": ch["goals"],
+                   "pages": ch.get("pages", [])}
+
+    is_images = script.get("mode") == "images"
+    # 图片本：本轮及之前的线索图直接公开给所有人
+    clue_images = []
+    if is_images and ri >= 0:
+        for r in range(ri + 1):
+            for url in script["rounds"][r].get("clue_images", []):
+                clue_images.append({"round": r + 1, "url": url})
 
     state = {
         "room": room["code"],
@@ -431,6 +485,8 @@ def api_state(body, qs):
             "id": script["id"], "title": script["title"], "tagline": script["tagline"],
             "background": script["background"], "victim": script.get("victim", ""),
             "vote_question": script.get("vote_question", "你认为谁是凶手？"),
+            "mode": script.get("mode", "text"),
+            "background_pages": script.get("background_pages", []),
             "characters": [{"id": c["id"], "name": c["name"], "brief": c["brief"],
                             "public": c["public"]} for c in script["characters"]],
         },
@@ -440,6 +496,7 @@ def api_state(body, qs):
         "locations": locations,
         "public_clues": public_clues,
         "my_clues": my_clues,
+        "clue_images": clue_images,
         "chat": room["chat"][-200:],
         "my_vote": room["votes"].get(pid),
         "votes_done": len(room["votes"]),
@@ -448,15 +505,23 @@ def api_state(body, qs):
         tally = {}
         for cid in room["votes"].values():
             tally[cid] = tally.get(cid, 0) + 1
-        state["reveal"] = {
-            "murderer_id": script["murderer"],
-            "murderer_name": char_by_id(script, script["murderer"])["name"],
-            "truth": script["truth"],
+        rev = {
             "tally": [{"char_id": cid, "char_name": char_by_id(script, cid)["name"],
                        "votes": n} for cid, n in sorted(tally.items(), key=lambda x: -x[1])],
-            "characters": [{"name": c["name"], "story": c["story"],
-                            "secrets": c["secrets"]} for c in script["characters"]],
         }
+        if is_images:
+            # 原版：真相在扫描页里，不剧透文字
+            rev["truth_pages"] = script.get("truth_pages", [])
+            rev["murderer_id"] = script.get("murderer", "")
+            rev["murderer_name"] = ""
+        else:
+            m = char_by_id(script, script["murderer"])
+            rev["murderer_id"] = script["murderer"]
+            rev["murderer_name"] = m["name"] if m else ""
+            rev["truth"] = script["truth"]
+            rev["characters"] = [{"name": c["name"], "story": c["story"],
+                                  "secrets": c["secrets"]} for c in script["characters"]]
+        state["reveal"] = rev
     return state
 
 API = {
@@ -500,9 +565,33 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             self._json({"error": "服务器内部错误: %s" % e}, 500)
 
+    def _serve_image(self, qs):
+        """服务原版图片本的扫描图。仅限 scripts_private/原版/<id>/ 内，严格防目录穿越。"""
+        sid = qs.get("s", [""])[0]
+        rel = qs.get("p", [""])[0]
+        script = SCRIPTS.get(sid)
+        if not script or script.get("mode") != "images" or not rel:
+            self.send_response(404); self.send_header("Content-Length", "0"); self.end_headers(); return
+        base = os.path.join(IMG_ROOT, sid)
+        fp = os.path.normpath(os.path.join(base, rel))
+        if not fp.startswith(base) or not os.path.isfile(fp):
+            self.send_response(404); self.send_header("Content-Length", "0"); self.end_headers(); return
+        with open(fp, "rb") as f:
+            data = f.read()
+        ext = os.path.splitext(fp)[1].lower()
+        ctype = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}.get(ext, "application/octet-stream")
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        if path == "/api/img":
+            return self._serve_image(parse_qs(parsed.query))
         if path.startswith("/api/"):
             return self._api(path[5:], {}, parse_qs(parsed.query))
         # 静态文件

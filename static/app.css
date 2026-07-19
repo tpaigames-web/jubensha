@@ -231,3 +231,21 @@ input:focus { border-color:#d9b45b; }
   background:#8a6d1f; color:#fff; text-align:center;
   font-size:13px; padding:6px 10px;
 }
+.tag-badge.t原版 { background:#3a1e2a; color:#e58aa5; border-color:#5a2c40; }
+/* 原版扫描图 */
+.img-gallery { display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+.scan-img {
+  width:100%; border-radius:8px; border:1px solid #33364a;
+  background:#fff; cursor:zoom-in; display:block;
+}
+.lightbox {
+  position:fixed; inset:0; z-index:90; background:#000d;
+  display:flex; align-items:center; justify-content:center;
+  overflow:auto; padding:8px;
+}
+.lightbox img {
+  max-width:100%; height:auto; border-radius:4px;
+  /* 放大态：可再点一次放到原尺寸横向滚动查看 */
+}
+.lightbox.zoomed { align-items:flex-start; }
+.lightbox.zoomed img { max-width:none; width:180%; cursor:zoom-out; }

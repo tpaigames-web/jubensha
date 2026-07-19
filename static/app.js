@@ -302,57 +302,100 @@ function renderGame() {
   renderBadges();
 }
 
+function imgGallery(urls) {
+  // 扫描图纵向铺开，点击放大（本地/局域网加载快，即时加载更可靠）
+  return `<div class="img-gallery">${urls.map((u, i) =>
+    `<img class="scan-img" src="${u}" data-zoom="${u}" alt="第${i + 1}页">`).join("")}</div>`;
+}
+
 function renderScriptPanel() {
   const s = STATE;
+  const isImg = s.script.mode === "images";
   let html = "";
   if (s.phase === "reveal" && s.reveal) {
     html += revealHtml();
   }
   if (s.my_char) {
+    if (isImg) {
+      html += `
+      <div class="card">
+        <div class="mychar-head">🎭 ${esc(s.my_char.name)}</div>
+        <div class="private-warn">⚠️ 这是你的原版角色本，只有你能看到，请勿把手机给他人看</div>
+        ${s.my_char.pages && s.my_char.pages.length
+          ? imgGallery(s.my_char.pages)
+          : '<p class="hint">本角色暂无扫描页</p>'}
+      </div>`;
+    } else {
+      html += `
+      <div class="card">
+        <div class="mychar-head">🎭 ${esc(s.my_char.name)}</div>
+        <div class="cc-brief">${esc(s.my_char.brief)}</div>
+        <div class="private-warn">⚠️ 以下内容只有你能看到，请勿直接展示手机给他人</div>
+        <div class="sec"><div class="sec-title">你的故事</div>
+          <div class="story-text">${esc(s.my_char.story)}</div></div>
+        <div class="sec"><div class="sec-title">你的秘密</div>
+          ${s.my_char.secrets.map(x => `<div class="secret-item">🤫 ${esc(x)}</div>`).join("")}</div>
+        <div class="sec"><div class="sec-title">你的任务</div>
+          ${s.my_char.goals.map(x => `<div class="goal-item">🎯 ${esc(x)}</div>`).join("")}</div>
+      </div>`;
+    }
+  }
+  if (isImg) {
     html += `
     <div class="card">
-      <div class="mychar-head">🎭 ${esc(s.my_char.name)}</div>
-      <div class="cc-brief">${esc(s.my_char.brief)}</div>
-      <div class="private-warn">⚠️ 以下内容只有你能看到，请勿直接展示手机给他人</div>
-      <div class="sec"><div class="sec-title">你的故事</div>
-        <div class="story-text">${esc(s.my_char.story)}</div></div>
-      <div class="sec"><div class="sec-title">你的秘密</div>
-        ${s.my_char.secrets.map(x => `<div class="secret-item">🤫 ${esc(x)}</div>`).join("")}</div>
-      <div class="sec"><div class="sec-title">你的任务</div>
-        ${s.my_char.goals.map(x => `<div class="goal-item">🎯 ${esc(x)}</div>`).join("")}</div>
+      <div class="sec"><div class="sec-title">案件背景（公开）</div>
+        ${s.script.background_pages && s.script.background_pages.length
+          ? imgGallery(s.script.background_pages)
+          : '<p class="hint">无背景页</p>'}</div>
+      <div class="sec"><div class="sec-title">在场角色</div>
+        ${s.script.characters.map(c => `<span class="p-tag" style="margin:3px 4px 0 0;display:inline-block">${esc(c.name)}</span>`).join("")}
+      </div>
+    </div>`;
+  } else {
+    html += `
+    <div class="card">
+      <div class="sec"><div class="sec-title">案件背景</div>
+        <div class="story-text">${esc(s.script.background)}</div></div>
+      ${s.script.victim ? `<div class="sec"><div class="sec-title">案件核心</div>
+        <div class="story-text">${esc(s.script.victim)}</div></div>` : ""}
+      <div class="sec"><div class="sec-title">人物介绍（公开信息）</div>
+        ${s.script.characters.map(c => `
+          <div style="margin-bottom:10px">
+            <b style="color:#f0e9d8">${esc(c.name)}</b>
+            <span class="cc-brief" style="display:inline;margin-left:6px">${esc(c.brief)}</span>
+            <div class="cc-pub">${esc(c.public)}</div>
+          </div>`).join("")}
+      </div>
     </div>`;
   }
-  html += `
-  <div class="card">
-    <div class="sec"><div class="sec-title">案件背景</div>
-      <div class="story-text">${esc(s.script.background)}</div></div>
-    ${s.script.victim ? `<div class="sec"><div class="sec-title">案件核心</div>
-      <div class="story-text">${esc(s.script.victim)}</div></div>` : ""}
-    <div class="sec"><div class="sec-title">人物介绍（公开信息）</div>
-      ${s.script.characters.map(c => `
-        <div style="margin-bottom:10px">
-          <b style="color:#f0e9d8">${esc(c.name)}</b>
-          <span class="cc-brief" style="display:inline;margin-left:6px">${esc(c.brief)}</span>
-          <div class="cc-pub">${esc(c.public)}</div>
-        </div>`).join("")}
-    </div>
-  </div>`;
   setIf("panel-script", html);
 }
 
 function revealHtml() {
   const r = STATE.reveal;
+  const isImg = STATE.script.mode === "images";
+  const tally = `<div class="sec"><div class="sec-title">投票结果</div>
+      ${r.tally.length ? r.tally.map(t => `
+        <div class="tally-row"><span>${esc(t.char_name)}${t.char_id === r.murderer_id ? " 🔪" : ""}</span>
+        <b>${t.votes} 票</b></div>`).join("") : '<p class="hint">无人投票</p>'}
+    </div>`;
+  if (isImg) {
+    return `
+    <div class="card">
+      <div class="reveal-hero"><div style="font-size:16px;color:#e0b25e">🎬 真相揭晓</div>
+        <div class="hint" style="margin-top:4px">原版真相与复盘见下方扫描页</div></div>
+      ${tally}
+      <div class="sec"><div class="sec-title">真相 · 复盘（原版）</div>
+        ${(r.truth_pages || []).length ? imgGallery(r.truth_pages) : '<p class="hint">无真相页</p>'}</div>
+    </div>`;
+  }
   return `
   <div class="card">
     <div class="reveal-hero">
       <div style="font-size:14px;color:#9a97a8">真相揭晓 · 真凶是</div>
       <div class="who">${esc(r.murderer_name)}</div>
     </div>
-    <div class="sec"><div class="sec-title">投票结果</div>
-      ${r.tally.length ? r.tally.map(t => `
-        <div class="tally-row"><span>${esc(t.char_name)}${t.char_id === r.murderer_id ? " 🔪" : ""}</span>
-        <b>${t.votes} 票</b></div>`).join("") : '<p class="hint">无人投票</p>'}
-    </div>
+    ${tally}
     <div class="sec"><div class="sec-title">真相复盘</div>
       <div class="truth-text">${esc(r.truth)}</div></div>
     <div class="sec"><div class="sec-title">各角色的秘密</div>
@@ -365,6 +408,25 @@ function revealHtml() {
 
 function renderCluesPanel() {
   const s = STATE;
+  // 原版图片本：线索是扫描图，按轮公开给所有人，无搜证机制
+  if (s.script.mode === "images") {
+    let html = "";
+    if (s.phase === "reading") {
+      html = `<div class="card"><p class="hint">阅读角色本阶段。房主推进到搜证轮后，本轮线索卡会在这里公开。</p></div>`;
+    } else if ((s.clue_images || []).length) {
+      const byRound = {};
+      s.clue_images.forEach(c => { (byRound[c.round] = byRound[c.round] || []).push(c.url); });
+      html = Object.keys(byRound).sort().map(r => `
+        <div class="card">
+          <div class="sec-title">📢 第${r}轮 · 公开线索（${byRound[r].length}张）</div>
+          ${imgGallery(byRound[r])}
+        </div>`).join("");
+    } else {
+      html = `<div class="card"><p class="hint">本轮暂无公开线索。</p></div>`;
+    }
+    setIf("panel-clues", html);
+    return;
+  }
   let html = "";
   const searching = s.phase.startsWith("round");
   if (searching) {
@@ -516,13 +578,14 @@ function renderBadges() {
     cb.style.display = "inline-block";
   } else cb.style.display = "none";
 
-  const unreadClues = s.public_clues.length - cluesSeen;
+  const clueCount = s.public_clues.length + (s.clue_images || []).length;
+  const unreadClues = clueCount - cluesSeen;
   const lb = $("clue-badge");
   if (activeTab !== "clues" && unreadClues > 0) {
     lb.textContent = unreadClues;
     lb.style.display = "inline-block";
   } else lb.style.display = "none";
-  if (activeTab === "clues") cluesSeen = s.public_clues.length;
+  if (activeTab === "clues") cluesSeen = clueCount;
 }
 
 // 标签切换
@@ -536,13 +599,34 @@ document.querySelectorAll(".tab").forEach(el =>
       chatSeen = STATE.chat.length;
       window.scrollTo(0, document.body.scrollHeight);
     }
-    if (activeTab === "clues" && STATE) cluesSeen = STATE.public_clues.length;
+    if (activeTab === "clues" && STATE) cluesSeen = STATE.public_clues.length + (STATE.clue_images || []).length;
     renderBadges && STATE && renderBadges();
   }));
 
 // 手机锁屏/切后台回来时立刻强制刷新一次，不用等下个轮询
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden && SESSION) poll(true);
+});
+
+// 扫描图点击放大：全局委托（图片内容会重渲染，监听器只挂一次）
+document.addEventListener("click", e => {
+  const img = e.target.closest(".scan-img");
+  if (img) {
+    const lb = $("lightbox");
+    $("lightbox-img").src = img.dataset.zoom;
+    lb.classList.remove("zoomed");
+    lb.style.display = "flex";
+    return;
+  }
+  if (e.target.id === "lightbox-img") {
+    // 在灯箱里点图片：放大/还原（横向滚动看细节）
+    $("lightbox").classList.toggle("zoomed");
+    return;
+  }
+  if (e.target.id === "lightbox") {
+    $("lightbox").style.display = "none";
+    $("lightbox-img").src = "";
+  }
 });
 
 // ---------- 启动 ----------
