@@ -8,6 +8,9 @@
 
 export { RoomDO } from "./room";
 
+import { listScripts } from "./skeleton";
+import { getContent } from "./content";
+
 export interface Env {
   ROOM: DurableObjectNamespace;
   ASSETS: Fetcher;
@@ -34,6 +37,19 @@ export default {
 
     if (url.pathname === "/health") {
       return Response.json({ ok: true, ts: Date.now() });
+    }
+
+    // 可选剧本列表：只回公开元信息（标题/人数/时长），不含任何剧情
+    if (url.pathname === "/api/scripts") {
+      const scripts = listScripts()
+        .filter((s) => s.scriptId !== "fasttest") // 计时探针本不对玩家展示
+        .map((s) => ({
+          scriptId: s.scriptId,
+          players: s.players,
+          durationMin: s.durationMin,
+          title: getContent(s.scriptId).resolve(s.titleKey) ?? s.scriptId,
+        }));
+      return Response.json({ scripts });
     }
 
     return env.ASSETS.fetch(request);

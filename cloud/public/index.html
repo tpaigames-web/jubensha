@@ -14,21 +14,40 @@
 
 <div class="wrap">
 
-  <!-- ========== 入口 ========== -->
-  <section id="v-entry" style="display:none">
+  <!-- ========== 第一步：身份 ========== -->
+  <section id="v-login" style="display:none">
     <div style="text-align:center;padding:26px 0 18px">
       <div style="font-size:3em">🕵️</div>
       <h1>剧本杀小馆</h1>
       <p class="hint">无主持人 · 程序当 DM</p>
     </div>
     <div class="card">
-      <h2>进入房间</h2>
-      <p class="hint" style="margin-bottom:10px">同一个房号的人会进同一局</p>
-      <div style="margin-bottom:10px"><input id="in-room" inputmode="numeric" maxlength="4" placeholder="4位房号，如 1234"></div>
+      <h2>你是谁</h2>
+      <p class="hint" style="margin-bottom:10px">PIN 用来在换设备、清缓存后找回你的席位，记住它</p>
       <div style="margin-bottom:10px"><input id="in-name" maxlength="12" placeholder="你的昵称"></div>
-      <div style="margin-bottom:12px"><input id="in-pin" inputmode="numeric" maxlength="4" placeholder="设置4位PIN（换设备时用来找回）"></div>
-      <button id="btn-enter" class="btn primary wide">入座</button>
-      <p class="hint" style="margin-top:10px">已经入过座？输入同样的房号+昵称+PIN 即可找回席位。</p>
+      <div style="margin-bottom:12px"><input id="in-pin" inputmode="numeric" maxlength="4" placeholder="设置4位PIN"></div>
+      <button id="btn-login" class="btn primary wide">下一步</button>
+    </div>
+  </section>
+
+  <!-- ========== 第二步：选本 / 加入房间 ========== -->
+  <section id="v-room" style="display:none">
+    <div class="row" style="padding:14px 0 8px">
+      <button class="icon-btn" id="btn-back-login">‹</button>
+      <div class="grow"><b id="who-label">—</b><div class="hint">开新局，或加入朋友的房间</div></div>
+    </div>
+    <div class="card">
+      <h2>🎭 开一局新的</h2>
+      <p class="hint" style="margin-bottom:10px">选一个剧本，系统会分配房号给你发给朋友</p>
+      <div id="script-list"><p class="hint">加载剧本中…</p></div>
+    </div>
+    <div class="card">
+      <h2>🚪 加入朋友的房间</h2>
+      <div class="row">
+        <input id="in-room" class="grow" inputmode="numeric" maxlength="4" placeholder="输入4位房号">
+        <button id="btn-join" class="btn primary" style="flex:none">加入</button>
+      </div>
+      <p class="hint" style="margin-top:8px">之前入过座？输入同样的房号即可自动找回席位。</p>
     </div>
   </section>
 

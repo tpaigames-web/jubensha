@@ -15,6 +15,8 @@ const S = {
   st: null,            // 最新 snapshot
   room: "",
   token: "",
+  name: "",
+  pin: "",
   offset: 0,           // serverNow - Date.now()
   tab: "script",
   narration: [],
@@ -45,7 +47,8 @@ function banner(msg, cls) {
   b.style.display = "block";
 }
 function show(view) {
-  for (const v of ["entry", "lobby", "game"]) $("v-" + v).style.display = v === view ? "block" : "none";
+  for (const v of ["login", "room", "lobby", "game"]) $("v-" + v).style.display = v === view ? "block" : "none";
+  window.scrollTo(0, 0);
 }
 function send(o) {
   if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o));
@@ -151,12 +154,20 @@ function handle(m) {
       toast(m.message || m.code);
       // 服务端拒绝时不推快照，主动要一次，避免界面停在过期状态
       if (S.st && m.code === "bad_input") setTimeout(() => send({ type: "snapshot.request" }), 400);
-      if (m.code === "bad_token") {           // 令牌失效 → 回落到 PIN 找回
+      if (m.code === "bad_token") {           // 令牌失效 → 用昵称+PIN 自动找回
         S.token = "";
         try { localStorage.removeItem("jbs2"); } catch {}
-        show("entry");
-        $("in-room").value = S.room;
-        toast("专属链接已失效，请用昵称+PIN 找回");
+        if (S.name && S.pin) {
+          send({ type: "seat.recover", displayName: S.name, pin: S.pin });
+        } else {
+          banner("");
+          show("login");
+          toast("专属链接已失效，请重新输入昵称和 PIN");
+        }
+      }
+      if (m.code === "seat_not_found" && S.name && S.pin) {
+        // 房间被重置过：当作新玩家重新入座
+        send({ type: "seat.claim", displayName: S.name, pin: S.pin });
       }
       break;
   }
@@ -166,21 +177,79 @@ function phaseName(p) {
   return { lobby: "等待入座", reading: "阅读剧本", playing: "对局中", debrief: "复盘", ended: "已结束" }[p] || p;
 }
 
-// ---------------- 入口 ----------------
-$("btn-enter").onclick = () => {
-  const room = $("in-room").value.trim();
+// ---------------- 第一步：身份 ----------------
+$("btn-login").onclick = () => {
   const name = $("in-name").value.trim();
   const pin = $("in-pin").value.trim();
-  if (!/^\d{4}$/.test(room)) return toast("请输入4位房号");
   if (!name) return toast("请输入昵称");
   if (!/^\d{4}$/.test(pin)) return toast("PIN 必须是4位数字");
+  S.name = name; S.pin = pin;
+  try { localStorage.setItem("jbs2_id", JSON.stringify({ name, pin })); } catch {}
   unlockAudio();
-  connect(room, () => {
-    // 先试认领；若昵称已存在会报错，再自动尝试用 PIN 找回
-    S._pending = { name, pin };
-    send({ type: "seat.claim", displayName: name, pin });
-  });
+  // 从别人分享的房间链接进来的：登记完身份直接入座
+  if (S._joinAfterLogin) { const r = S._joinAfterLogin; S._joinAfterLogin = null; return enterRoom(r); }
+  gotoRoomView();
 };
+$("btn-back-login").onclick = () => show("login");
+
+function gotoRoomView() {
+  $("who-label").textContent = S.name;
+  show("room");
+  loadScripts();
+}
+
+// ---------------- 第二步：选本 / 加入 ----------------
+async function loadScripts() {
+  try {
+    const r = await fetch("/api/scripts").then((x) => x.json());
+    $("script-list").innerHTML = r.scripts.map((s) => `
+      <div class="char-card" data-script="${esc(s.scriptId)}">
+        <b>${esc(s.title)}</b>
+        <div class="hint">${s.players} 人本 · 约 ${s.durationMin} 分钟</div>
+      </div>`).join("") || '<p class="hint">暂无可用剧本</p>';
+    $("script-list").querySelectorAll("[data-script]").forEach((el) => {
+      el.onclick = () => createRoom(el.dataset.script);
+    });
+  } catch {
+    $("script-list").innerHTML = '<p class="hint">剧本列表加载失败，检查网络后重试</p>';
+  }
+}
+
+const rnd4 = () => String(Math.floor(1000 + Math.random() * 9000));
+
+/** 开新局：随机房号，若撞上已有人的房间则换一个 */
+function createRoom(scriptId, tries = 0) {
+  if (tries > 6) return toast("房号分配失败，请重试");
+  const code = rnd4();
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const probe = new WebSocket(`${proto}://${location.host}/ws?room=${code}&script=${encodeURIComponent(scriptId)}`);
+  const timer = setTimeout(() => { try { probe.close(); } catch {} ; createRoom(scriptId, tries + 1); }, 6000);
+  probe.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.type !== "hello") return;
+    clearTimeout(timer);
+    probe.onmessage = null;
+    try { probe.close(); } catch {}
+    if (m.room.seatsTaken > 0) return createRoom(scriptId, tries + 1); // 撞号了，换一个
+    enterRoom(code);
+  };
+  probe.onerror = () => { clearTimeout(timer); toast("连接失败"); };
+}
+
+$("btn-join").onclick = () => {
+  const code = $("in-room").value.trim();
+  if (!/^\d{4}$/.test(code)) return toast("请输入4位房号");
+  enterRoom(code);
+};
+
+/** 入座：先认领，重名/已开局则自动用 PIN 找回 */
+function enterRoom(code) {
+  unlockAudio();
+  connect(code, () => {
+    S._pending = { name: S.name, pin: S.pin };
+    send({ type: "seat.claim", displayName: S.name, pin: S.pin });
+  });
+}
 
 // 认领失败（重名/已开始）时自动走找回
 const origHandle = handle;
@@ -621,20 +690,37 @@ document.addEventListener("visibilitychange", () => {
     if (f !== null) { S.fontIdx = Number(f); document.documentElement.style.setProperty("--fs", FONTS[S.fontIdx] + "px"); }
   } catch {}
 
+  // 记住身份，免得每局重输
+  try {
+    const id = JSON.parse(localStorage.getItem("jbs2_id") || "null");
+    if (id?.name) { S.name = id.name; S.pin = id.pin; $("in-name").value = id.name; $("in-pin").value = id.pin || ""; }
+  } catch {}
+
   const sess = loadSession();
   if (sess) {
     S.token = sess.token;
-    show("game");
+    show("lobby");
     banner("正在恢复你的席位…", "warn");
     connect(sess.room, () => {
       send({ type: "seat.resume", seatToken: sess.token });
       saveSession();
     });
+    keepAwake();
+    return;
+  }
+
+  const u = new URL(location.href);
+  const urlRoom = u.searchParams.get("room");
+  if (urlRoom && S.name && S.pin) {
+    // 别人分享的房间链接（无令牌）：身份已记住，直接入座
+    enterRoom(urlRoom);
+  } else if (urlRoom) {
+    show("login");
+    S._joinAfterLogin = urlRoom;
+  } else if (S.name && S.pin) {
+    gotoRoomView();
   } else {
-    show("entry");
-    const u = new URL(location.href);
-    const r = u.searchParams.get("room");
-    if (r) $("in-room").value = r;
+    show("login");
   }
   keepAwake();
 })();
