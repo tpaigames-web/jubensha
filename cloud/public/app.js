@@ -299,6 +299,7 @@ function renderLobby() {
   const st = S.st;
   $("lobby-room").textContent = st.room.roomId;
   $("lobby-count").textContent = `${st.seats.length} / ${st.room.seatCount} 人已入座`;
+  $("lobby-script").textContent = st.content[st.script.titleKey] || st.script.scriptId;
   renderSeats();
 
   const taken = {};
@@ -629,10 +630,12 @@ function leaveRoom(scriptId) {
   else gotoRoomView();
 }
 
-$("btn-exit").onclick = () => {
+const confirmLeave = () => {
   const ended = S.st?.room?.phase === "ended";
   if (ended || confirm("确定离开这个房间吗？你的席位会保留，用同样的房号+昵称+PIN 可以回来。")) leaveRoom(null);
 };
+$("btn-exit").onclick = confirmLeave;
+$("btn-lobby-exit").onclick = confirmLeave;
 
 // ---------------- 计时器（服务端时钟） ----------------
 setInterval(tickTimer, 1000);

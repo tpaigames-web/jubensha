@@ -12,6 +12,7 @@
  */
 
 import packText from "../scripts/placeholder/content.pack";
+import radioPack from "../scripts/radio/content.pack";
 
 export interface ContentSource {
   resolve(key: string): string | null;
@@ -46,6 +47,7 @@ const sources: Record<string, ContentSource> = {
   placeholder: placeholderPack,
   /** 计时探针剧本复用同一套占位 key，无需单独文案包 */
   fasttest: placeholderPack,
+  radio: new JsonContentSource(radioPack as unknown as string),
 };
 
 export function getContent(scriptId: string): ContentSource {

@@ -4,6 +4,7 @@
 
 import skeletonJson from "../scripts/placeholder/skeleton.json";
 import fastTestJson from "../scripts/fasttest/skeleton.json";
+import radioJson from "../scripts/radio/skeleton.json";
 
 export interface Visibility {
   type: "public" | "private";
@@ -61,6 +62,7 @@ const registry: Record<string, Skeleton> = {
   placeholder: skeletonJson as unknown as Skeleton,
   /** 仅用于验证 DO Alarm 计时链路：幕长与提示时间被压缩到秒级 */
   fasttest: fastTestJson as unknown as Skeleton,
+  radio: radioJson as unknown as Skeleton,
 };
 
 export const hasSkeleton = (scriptId: string) => scriptId in registry;
