@@ -111,9 +111,25 @@ function reconnect() {
 // ---------------- 消息处理 ----------------
 function handle(m) {
   switch (m.type) {
-    case "hello":
+    case "hello": {
       if (typeof m.serverNow === "number") S.offset = m.serverNow - Date.now();
+      // 「加入房间」时若该房号其实还没人，说明多半是输错了。
+      // 若直接入座，服务端会用默认剧本把空房建出来，玩家就再也没机会选本——必须先问清楚。
+      const j = S._pendingJoin;
+      if (j) {
+        S._pendingJoin = null;
+        if (m.room.seatsTaken === 0 && !j.expectNew) {
+          try { if (S.ws) { S.ws.onclose = null; S.ws.close(); } } catch {}
+          S.ws = null; S.connected = false;
+          banner("");
+          show("room");
+          toast(`房号 ${j.code} 还没有人。要开新局请在上面选剧本；加入朋友请核对房号。`);
+          return;
+        }
+        send({ type: "seat.claim", displayName: S.name, pin: S.pin });
+      }
       break;
+    }
 
     case "snapshot.full": {
       S.offset = m.room.serverNow - Date.now();
@@ -231,7 +247,7 @@ function createRoom(scriptId, tries = 0) {
     probe.onmessage = null;
     try { probe.close(); } catch {}
     if (m.room.seatsTaken > 0) return createRoom(scriptId, tries + 1); // 撞号了，换一个
-    enterRoom(code);
+    enterRoom(code, true); // 自己刚开的新局，空房是正常的
   };
   probe.onerror = () => { clearTimeout(timer); toast("连接失败"); };
 }
@@ -242,12 +258,15 @@ $("btn-join").onclick = () => {
   enterRoom(code);
 };
 
-/** 入座：先认领，重名/已开局则自动用 PIN 找回 */
-function enterRoom(code) {
+/**
+ * 入座。expectNew=true 表示这是「选本开局」刚建好的房间，空房属正常；
+ * 否则视为「加入朋友的房间」，空房要先警告，避免误建成默认剧本的房间。
+ */
+function enterRoom(code, expectNew = false) {
   unlockAudio();
   connect(code, () => {
     S._pending = { name: S.name, pin: S.pin };
-    send({ type: "seat.claim", displayName: S.name, pin: S.pin });
+    S._pendingJoin = { code, expectNew };
   });
 }
 
