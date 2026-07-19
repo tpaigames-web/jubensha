@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>剧本杀小馆 · 新引擎（施工中）</title>
+<body style="font-family:system-ui;background:#12141c;color:#e8e6df;padding:24px">
+<h1>剧本杀小馆 · 新引擎</h1>
+<p>地基验证页。前端将在后续阶段迁入。</p>
+<pre id="log" style="background:#1b1e2b;padding:12px;border-radius:8px;white-space:pre-wrap"></pre>
+<script>
+const log = m => document.getElementById('log').textContent += m + '\n';
+const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?room=1234`);
+ws.onopen = () => log('WS 已连接');
+ws.onmessage = e => log('← ' + e.data);
+ws.onclose = () => log('WS 已关闭');
+setTimeout(() => ws.send(JSON.stringify({ type: 'bump' })), 500);
+</script>
+</body>

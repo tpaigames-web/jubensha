@@ -3,3 +3,7 @@ __pycache__/
 *.log
 # 购买的商业剧本改编版：仅本地使用，禁止推到公开仓库
 scripts_private/
+
+# Cloudflare Workers
+cloud/node_modules/
+cloud/.wrangler/

@@ -1,0 +1,18 @@
+name = "jubensha"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# 静态前端资源
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# 一个房间 = 一个 Durable Object 实例：状态强一致、进程回收不丢
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "RoomDO"
+
+# SQLite-backed DO（免费层可用的那一种）
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomDO"]
