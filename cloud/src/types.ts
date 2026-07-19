@@ -26,8 +26,11 @@ export interface RoomState {
   /** 已触发过的防卡车提示 key，避免重复放 */
   hintsFired: string[];
   debriefUnlocked: string[];
-  /** voteId → (seatId → choice)。保留完整票型，结算按票型分支 */
-  votes: Record<string, Record<string, string>>;
+  /** voteId → (seatId → choice)。保留完整票型，结算按票型分支。
+   *  单选为 string；ranked/multi 为 string[] */
+  votes: Record<string, Record<string, string | string[]>>;
+  /** mechanicId → 机制内部状态（由各自 validator 定义，引擎不解释） */
+  mechanics: Record<string, unknown>;
 }
 
 export interface Seat {
@@ -73,8 +76,11 @@ export type ClientMsg =
   | { type: "read.progress"; progress: number }
   | { type: "act.ready" }
   | { type: "clue.unlock"; locationId: string }
-  | { type: "vote.cast"; voteId: string; choice: string }
+  | { type: "vote.cast"; voteId: string; choice: string | string[] }
+  | { type: "mechanic.action"; mechanicId: string; payload: unknown }
   | { type: "debrief.next" }
+  /** 主动索要一次全量快照：操作被拒或客户端自认状态可疑时用 */
+  | { type: "snapshot.request" }
   | { type: "ping" };
 
 // ---------- Server → Client ----------
@@ -103,6 +109,8 @@ export interface SnapshotFull {
     characters: { id: string; nameKey: string; briefKey: string }[];
     actCount: number;
     locations: string[];
+    /** 其中对本席位仍有可搜线索的地点 */
+    locationsAvailable: string[];
     searchQuota: number;
     searchUsed: number;
     myScriptKeys: string[];
@@ -113,10 +121,15 @@ export interface SnapshotFull {
     mode: string;
     promptKey: string;
     options: { id: string; labelKey: string }[];
-    myChoice: string | null;
+    myChoice: string | string[] | null;
     castCount: number;
-    ballots?: Record<string, string>;
+    seatCount: number;
+    /** 仅实名公开模式回传完整票型；匿名模式只回统计 */
+    ballots?: Record<string, string | string[]>;
+    tally?: Record<string, number>;
   } | null;
+  /** 当前幕激活的机制（已按本席位视角投影） */
+  mechanic: { mechanicId: string; state: unknown; complete: boolean } | null;
   debrief: { id: string; contentKey: string }[];
   narration: { key: string; at: number; text: string }[];
   /** key → 正文。只含本席位【此刻有权】解析的 key（已过 entitledKeys 闸门） */

@@ -61,7 +61,7 @@
       },
       "locations": ["loc.altar", "loc.cellar"],
       "searchQuota": { "perSeat": 1 },
-      "advance": { "type": "all_ready_or_timeout", "requires": ["vote_done"], "timeoutMin": 15 },
+      "advance": { "type": "all_ready_or_timeout", "requires": ["vote_done", "mechanic_done"], "timeoutMin": 15 },
       "mechanics": ["timeline_puzzle"],
       "hints": [{ "afterMin": 8, "narrationKey": "nar.act3.hint1" }]
     }

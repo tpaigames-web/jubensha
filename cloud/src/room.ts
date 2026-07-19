@@ -19,7 +19,8 @@ import {
 import { hashPin, hashToken, newId, newSalt, newSeatToken, timingSafeEqual } from "./crypto";
 import { getSkeleton, hasSkeleton, Skeleton } from "./skeleton";
 import { getContent } from "./content";
-import { entitledKeys, searchCandidates, visibleClues, VisibilityCtx } from "./visibility";
+import { availableLocations, entitledKeys, searchCandidates, visibleClues, VisibilityCtx } from "./visibility";
+import { getMechanic } from "./mechanics";
 
 const K_ROOM = "room";
 const K_SEATS = "seats";
@@ -54,6 +55,7 @@ export class RoomDO implements DurableObject {
       hintsFired: [],
       debriefUnlocked: [],
       votes: {},
+      mechanics: {},
     };
     await this.ctx.storage.put(K_ROOM, fresh);
     return fresh;
@@ -198,6 +200,8 @@ export class RoomDO implements DurableObject {
         actCount: sk.acts.length,
         /** 仅当前幕的可搜地点与配额 */
         locations: act ? act.locations : [],
+        /** 其中「对我还有可搜线索」的子集：界面据此把搜空的地点置灰 */
+        locationsAvailable: availableLocations(sk, vctx),
         searchQuota: act ? act.searchQuota.perSeat : 0,
         searchUsed: me.searchUsed?.[room.actIndex] ?? 0,
         /** 仅已开放幕的自己剧本 key */
@@ -209,7 +213,8 @@ export class RoomDO implements DurableObject {
           : [],
       },
       clues: myClues,
-      vote: this.voteView(room, sk, me),
+      vote: this.voteView(room, sk, me, Object.keys(seats).length),
+      mechanic: this.mechanicView(room, sk, me),
       debrief:
         room.phase === "debrief" || room.phase === "ended"
           ? sk.debrief.segments
@@ -223,12 +228,24 @@ export class RoomDO implements DurableObject {
     return snap;
   }
 
-  private voteView(room: RoomState, sk: Skeleton, me: Seat) {
+  private voteView(room: RoomState, sk: Skeleton, me: Seat, seatCount: number) {
     const act = room.actIndex >= 0 ? sk.acts[room.actIndex] : null;
     if (!act) return null;
     const v = sk.votes.find((x) => x.act === act.id);
     if (!v) return null;
     const ballots = room.votes[v.id] ?? {};
+
+    // 匿名模式只回统计，不回「谁投了什么」
+    let tally: Record<string, number> | undefined;
+    if (v.mode !== "single_public") {
+      tally = {};
+      for (const choice of Object.values(ballots)) {
+        for (const c of Array.isArray(choice) ? choice : [choice]) {
+          tally[c] = (tally[c] ?? 0) + 1;
+        }
+      }
+    }
+
     return {
       voteId: v.id,
       mode: v.mode,
@@ -236,9 +253,51 @@ export class RoomDO implements DurableObject {
       options: v.options.map((o) => ({ id: o.id, labelKey: o.labelKey })),
       myChoice: ballots[me.seatId] ?? null,
       castCount: Object.keys(ballots).length,
-      /** 实名公开模式才回传完整票型 */
+      seatCount,
       ballots: v.mode === "single_public" ? ballots : undefined,
+      tally,
     };
+  }
+
+  /** 当前幕的机制（按席位投影） */
+  private mechanicView(room: RoomState, sk: Skeleton, me: Seat) {
+    const act = room.actIndex >= 0 ? sk.acts[room.actIndex] : null;
+    if (!act || !act.mechanics.length) return null;
+    const mid = act.mechanics[0];
+    const impl = getMechanic(mid);
+    const st = room.mechanics[mid];
+    if (!impl || st === undefined) return null;
+    return {
+      mechanicId: mid,
+      state: impl.projectFor(st, me.seatId),
+      complete: impl.isComplete(st),
+    };
+  }
+
+  /** 进入某幕时初始化该幕声明的机制 */
+  private initMechanics(room: RoomState, sk: Skeleton, seats: SeatMap, actIndex: number): void {
+    const act = sk.acts[actIndex];
+    for (const mid of act.mechanics ?? []) {
+      const impl = getMechanic(mid);
+      if (!impl || room.mechanics[mid] !== undefined) continue;
+      const decl = sk.mechanics.find((m) => m.id === mid);
+      room.mechanics[mid] = impl.init(
+        decl?.params ?? {},
+        Object.values(seats).map((s) => ({ seatId: s.seatId, characterId: s.characterId }))
+      );
+    }
+  }
+
+  /** 该幕声明的机制是否全部完成 */
+  private mechanicsDone(room: RoomState, sk: Skeleton): boolean {
+    const act = sk.acts[room.actIndex];
+    if (!act) return true;
+    for (const mid of act.mechanics ?? []) {
+      const impl = getMechanic(mid);
+      const st = room.mechanics[mid];
+      if (impl && st !== undefined && !impl.isComplete(st)) return false;
+    }
+    return true;
   }
 
   private async pushSnapshotAll(room: RoomState, seats: SeatMap): Promise<void> {
@@ -380,6 +439,7 @@ export class RoomDO implements DurableObject {
       s.ready = false;
       s.searchUsed = { ...(s.searchUsed ?? {}), [index]: 0 };
     }
+    this.initMechanics(room, sk, seats, index);
     await this.putSeats(seats);
     await this.narrate(room, act.openingNarrationKey, "act-open");
     await this.putRoom(room);
@@ -431,7 +491,9 @@ export class RoomDO implements DurableObject {
     const choices = Object.values(ballots);
     if (!choices.length) return;
 
-    const uniq = [...new Set(choices)];
+    // 单选看是否一致；ranked/multi 看首选项是否一致
+    const primary = choices.map((c) => (Array.isArray(c) ? c[0] : c));
+    const uniq = [...new Set(primary)];
     let match = "split";
     if (uniq.length === 1) match = "unanimous_" + uniq[0];
 
@@ -464,7 +526,8 @@ export class RoomDO implements DurableObject {
     const req = act.advance.requires ?? [];
     const reqOk =
       (!req.includes("all_read") || this.allRead(seats)) &&
-      (!req.includes("vote_done") || this.voteDone(room, sk, seats));
+      (!req.includes("vote_done") || this.voteDone(room, sk, seats)) &&
+      (!req.includes("mechanic_done") || this.mechanicsDone(room, sk));
 
     if (act.advance.type !== "timeout" && this.allReady(seats) && reqOk) {
       await this.advance(room, seats, "all_ready");
@@ -626,6 +689,15 @@ export class RoomDO implements DurableObject {
       case "ping":
         return this.send(ws, { type: "pong", serverNow: Date.now() });
 
+      case "snapshot.request": {
+        const att = this.attachmentOf(ws);
+        if (!att?.seatId) return this.send(ws, { type: "error", code: ERR.NOT_SEATED, message: "尚未入座" });
+        const seats = await this.getSeats();
+        const seat = seats[att.seatId];
+        if (!seat) return this.send(ws, { type: "error", code: ERR.SEAT_NOT_FOUND, message: "席位已不存在" });
+        return this.send(ws, this.snapshot(room, seats, seat));
+      }
+
       case "seat.claim": {
         const name = String(msg.displayName ?? "").trim().slice(0, 12);
         const pin = String(msg.pin ?? "");
@@ -714,9 +786,44 @@ export class RoomDO implements DurableObject {
           const act = sk.acts[room.actIndex];
           const v = sk.votes.find((x) => x.act === act?.id);
           if (!v || v.id !== String(msg.voteId ?? "")) return "投票不存在";
-          const choice = String(msg.choice ?? "");
-          if (!v.options.some((o) => o.id === choice)) return "选项不存在";
+          const valid = new Set(v.options.map((o) => o.id));
+
+          let choice: string | string[];
+          if (v.mode === "ranked" || v.mode === "multi") {
+            const arr = Array.isArray(msg.choice) ? msg.choice.map(String) : [];
+            if (!arr.length) return "请至少选择一项";
+            if (arr.some((c) => !valid.has(c))) return "选项不存在";
+            if (new Set(arr).size !== arr.length) return "不能重复选择同一项";
+            if (v.mode === "ranked" && arr.length !== v.options.length) return "排序模式需要对全部选项排序";
+            choice = arr;
+          } else {
+            const c = String(msg.choice ?? "");
+            if (!valid.has(c)) return "选项不存在";
+            choice = c;
+          }
           room.votes[v.id] = { ...(room.votes[v.id] ?? {}), [seat.seatId]: choice };
+        });
+
+      case "mechanic.action":
+        return this.withSeat(ws, room, (seat) => {
+          if (room.phase !== "playing") return "当前不在对局中";
+          const act = sk.acts[room.actIndex];
+          const mid = String(msg.mechanicId ?? "");
+          if (!act.mechanics?.includes(mid)) return "该机制在本幕未激活";
+          const impl = getMechanic(mid);
+          if (!impl) return "机制不存在";
+          const st = room.mechanics[mid];
+          if (st === undefined) return "机制未初始化";
+
+          const res = impl.onAction(st, seat.seatId, msg.payload);
+          if (res.reject) return res.reject;
+          room.mechanics[mid] = res.nextState;
+
+          // 机制自定义事件：定向或广播
+          for (const ev of res.events) {
+            if (ev.toSeatId) this.sendToSeat(ev.toSeatId, { type: "mechanic.event", mechanicId: mid, ...ev });
+            else this.broadcast({ type: "mechanic.event", mechanicId: mid, ...ev });
+          }
         });
 
       case "debrief.next":

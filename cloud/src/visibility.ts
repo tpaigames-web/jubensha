@@ -89,6 +89,18 @@ export function searchCandidates(
 }
 
 /**
+ * 本幕中「对该席位仍有可搜线索」的地点。
+ * 只回地点名单、不回剩余条数——避免泄露线索总量，同时让界面能把搜空的地点置灰，
+ * 不然玩家会对着已经搜空的地点反复空点。
+ */
+export function availableLocations(sk: Skeleton, ctx: VisibilityCtx): string[] {
+  if (ctx.phase !== "playing" || ctx.actIndex < 0) return [];
+  const act = sk.acts[ctx.actIndex];
+  if (!act) return [];
+  return act.locations.filter((loc) => searchCandidates(sk, ctx, loc).length > 0);
+}
+
+/**
  * 该席位此刻**有权解析**的全部 content key。
  * 这是防剧透的总闸：不在这个集合里的 key，任何路径都不得解析下发。
  */

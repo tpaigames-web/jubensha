@@ -125,6 +125,38 @@ for (const c of P) { c.send({ type: "act.ready" }); await wait(120); }
 await waitFor(() => P[0].last("snapshot.full")?.room?.actIndex === 2);
 ok(P[0].last("snapshot.full")?.room?.actIndex === 2, "进入第三幕");
 
+// ---------- 机制框架（阶段5） ----------
+console.log("\n【机制】可插拔组件框架");
+const m0 = P[0].last("snapshot.full")?.mechanic;
+ok(m0?.mechanicId === "timeline_puzzle", "第三幕机制已按 skeleton 声明加载: " + m0?.mechanicId);
+ok(Array.isArray(m0?.state?.slots) && m0.state.slots.length >= 4, "机制状态已投影给客户端");
+ok(m0?.state?.myFragments?.length === 1, "每席位持有各自私有碎片");
+ok(typeof m0?.state?.othersHolding === "number", "他人未打出的碎片只暴露数量，不暴露内容");
+ok(m0?.complete === false, "初始未完成");
+
+// 非法操作必须被服务端拒绝
+const myFrag = m0.state.myFragments[0].fragId;
+P[1].send({ type: "mechanic.action", mechanicId: "timeline_puzzle", payload: { op: "place", fragId: myFrag, slot: 0 } });
+await wait(400);
+ok(P[1].last("error")?.message?.includes("不是你的碎片"), "服务端拒绝操作他人碎片");
+P[0].send({ type: "mechanic.action", mechanicId: "timeline_puzzle", payload: { op: "place", fragId: myFrag, slot: 99 } });
+await wait(400);
+ok(P[0].last("error")?.message?.includes("格子不存在"), "服务端拒绝非法格子");
+
+// 四人各放一枚碎片，填满时间线
+for (let i = 0; i < 4; i++) {
+  const st = P[i].last("snapshot.full").mechanic.state;
+  P[i].send({
+    type: "mechanic.action",
+    mechanicId: "timeline_puzzle",
+    payload: { op: "place", fragId: st.myFragments[0].fragId, slot: i },
+  });
+  await wait(250);
+}
+await waitFor(() => P[0].last("snapshot.full")?.mechanic?.complete === true);
+ok(P[0].last("snapshot.full")?.mechanic?.complete === true, "填满后机制判定完成");
+ok(P[1].last("snapshot.full")?.mechanic?.state?.emptySlots?.length === 0, "缺口位置投影给所有人（已无缺口）");
+
 // ---------- 投票（完整票型 + 分支结算） ----------
 console.log("\n【投票】完整票型与分支结算");
 const v = P[0].last("snapshot.full")?.vote;

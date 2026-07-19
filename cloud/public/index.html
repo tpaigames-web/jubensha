@@ -1,16 +1,87 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
 <meta charset="utf-8">
-<title>剧本杀小馆 · 新引擎（施工中）</title>
-<body style="font-family:system-ui;background:#12141c;color:#e8e6df;padding:24px">
-<h1>剧本杀小馆 · 新引擎</h1>
-<p>地基验证页。前端将在后续阶段迁入。</p>
-<pre id="log" style="background:#1b1e2b;padding:12px;border-radius:8px;white-space:pre-wrap"></pre>
-<script>
-const log = m => document.getElementById('log').textContent += m + '\n';
-const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?room=1234`);
-ws.onopen = () => log('WS 已连接');
-ws.onmessage = e => log('← ' + e.data);
-ws.onclose = () => log('WS 已关闭');
-setTimeout(() => ws.send(JSON.stringify({ type: 'bump' })), 500);
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<title>剧本杀小馆</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="banner" class="banner warn" style="display:none"></div>
+<div id="toast" class="toast" style="display:none"></div>
+<div id="drag-ghost"></div>
+
+<div class="wrap">
+
+  <!-- ========== 入口 ========== -->
+  <section id="v-entry" style="display:none">
+    <div style="text-align:center;padding:26px 0 18px">
+      <div style="font-size:3em">🕵️</div>
+      <h1>剧本杀小馆</h1>
+      <p class="hint">无主持人 · 程序当 DM</p>
+    </div>
+    <div class="card">
+      <h2>进入房间</h2>
+      <p class="hint" style="margin-bottom:10px">同一个房号的人会进同一局</p>
+      <div style="margin-bottom:10px"><input id="in-room" inputmode="numeric" maxlength="4" placeholder="4位房号，如 1234"></div>
+      <div style="margin-bottom:10px"><input id="in-name" maxlength="12" placeholder="你的昵称"></div>
+      <div style="margin-bottom:12px"><input id="in-pin" inputmode="numeric" maxlength="4" placeholder="设置4位PIN（换设备时用来找回）"></div>
+      <button id="btn-enter" class="btn primary wide">入座</button>
+      <p class="hint" style="margin-top:10px">已经入过座？输入同样的房号+昵称+PIN 即可找回席位。</p>
+    </div>
+  </section>
+
+  <!-- ========== 大厅 ========== -->
+  <section id="v-lobby" style="display:none">
+    <div class="card" style="text-align:center">
+      <div class="hint">房号</div>
+      <div style="font-size:2.2em;font-weight:800;letter-spacing:8px;color:#d9b45b" id="lobby-room">----</div>
+      <div id="lobby-count" class="hint"></div>
+    </div>
+    <div class="card">
+      <h2>🔗 你的专属链接</h2>
+      <p class="hint" style="margin-bottom:8px">换设备、微信被杀后台后，打开这个链接就能回到你的席位。建议现在就发给自己。</p>
+      <div class="link-box" id="my-link">—</div>
+      <button id="btn-copy" class="btn ghost wide" style="margin-top:8px">📋 复制我的专属链接</button>
+    </div>
+    <div class="card">
+      <h2>👥 席位</h2>
+      <div id="lobby-seats"></div>
+    </div>
+    <div class="card">
+      <h2>🎭 选择角色</h2>
+      <p class="hint" style="margin-bottom:8px">全员选定后自动开始，无需房主</p>
+      <div id="lobby-chars"></div>
+      <button id="btn-random" class="btn ghost wide">🎲 随机分配给我</button>
+    </div>
+  </section>
+
+  <!-- ========== 对局 ========== -->
+  <section id="v-game" style="display:none">
+    <div class="topbar">
+      <span class="badge-phase" id="g-phase">—</span>
+      <span class="timer grow" id="g-timer"></span>
+      <button class="icon-btn" id="btn-font" title="字号">A</button>
+      <button class="icon-btn" id="btn-sound" title="声音">🔊</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="script">📖 剧本</button>
+      <button class="tab" data-tab="clue">🔍 线索<span class="n" id="n-clue" style="display:none"></span></button>
+      <button class="tab" data-tab="act">🎬 行动<span class="n" id="n-act" style="display:none"></span></button>
+      <button class="tab" data-tab="dm">📣 播报<span class="n" id="n-dm" style="display:none"></span></button>
+    </div>
+
+    <div id="p-script" class="panel active"></div>
+    <div id="p-clue" class="panel"></div>
+    <div id="p-act" class="panel"></div>
+    <div id="p-dm" class="panel"></div>
+
+    <div class="actionbar" id="actionbar"></div>
+  </section>
+
+</div>
+<script src="app.js"></script>
 </body>
+</html>
