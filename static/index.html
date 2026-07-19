@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>剧本杀小馆</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ========== 首页 ========== -->
+<div id="view-home" class="view">
+  <div class="home-hero">
+    <div class="logo">🕵️</div>
+    <h1>剧本杀小馆</h1>
+    <p class="sub">同一WiFi下，用浏览器就能一起玩</p>
+  </div>
+  <div class="card">
+    <label>你的昵称</label>
+    <input id="home-name" maxlength="12" placeholder="输入昵称，如：老王">
+  </div>
+  <div class="card">
+    <h3>🎭 创建房间</h3>
+    <p class="hint">选一个剧本，创建后把房号告诉朋友</p>
+    <div id="script-list" class="script-list">加载剧本中…</div>
+  </div>
+  <div class="card">
+    <h3>🚪 加入房间</h3>
+    <div class="row">
+      <input id="join-code" inputmode="numeric" maxlength="4" placeholder="4位房号">
+      <button id="btn-join" class="btn primary">加入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 大厅 ========== -->
+<div id="view-lobby" class="view" style="display:none">
+  <div class="lobby-head">
+    <div class="room-code-box">
+      <span class="rc-label">房号</span>
+      <span id="lobby-code" class="rc-num">0000</span>
+    </div>
+    <div id="lobby-script" class="lobby-script"></div>
+    <p class="hint">朋友在同一WiFi下打开本页面，输入房号即可加入</p>
+  </div>
+  <div class="card">
+    <h3>👥 玩家 <span id="lobby-count"></span></h3>
+    <div id="lobby-players"></div>
+  </div>
+  <div class="card">
+    <h3>🎭 选择角色</h3>
+    <p class="hint">可自选角色，或交给命运随机分配</p>
+    <div id="lobby-chars"></div>
+    <button id="btn-random" class="btn ghost wide">🎲 随机分配给我</button>
+  </div>
+  <div id="lobby-host-area"></div>
+  <button id="btn-leave" class="btn ghost wide" style="margin-top:8px">离开房间</button>
+</div>
+
+<!-- ========== 游戏 ========== -->
+<div id="view-game" class="view" style="display:none">
+  <div class="game-head">
+    <div class="gh-left">
+      <span id="game-phase" class="phase-badge"></span>
+      <span id="game-room" class="room-mini"></span>
+    </div>
+    <div id="game-host-btn"></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="script">📖 剧本</button>
+    <button class="tab" data-tab="clues">🔍 线索<span id="clue-badge" class="badge" style="display:none"></span></button>
+    <button class="tab" data-tab="chat">💬 讨论<span id="chat-badge" class="badge" style="display:none"></span></button>
+    <button class="tab" data-tab="vote">🗳️ 投票</button>
+  </div>
+
+  <div id="panel-script" class="panel active"></div>
+  <div id="panel-clues" class="panel"></div>
+  <div id="panel-chat" class="panel">
+    <div id="chat-list" class="chat-list"></div>
+    <div class="chat-input-row">
+      <input id="chat-input" maxlength="500" placeholder="发言…">
+      <button id="btn-send" class="btn primary">发送</button>
+    </div>
+  </div>
+  <div id="panel-vote" class="panel"></div>
+</div>
+
+<!-- ========== 弹窗 & 提示 ========== -->
+<div id="conn-banner" class="conn-banner" style="display:none">📶 网络不稳定，正在自动重连…</div>
+<div id="modal" class="modal" style="display:none">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+<div id="toast" class="toast" style="display:none"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
