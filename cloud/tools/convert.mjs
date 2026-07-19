@@ -63,12 +63,23 @@ for (let i = 0; i < searchActs; i++) {
     durationMin: 20,
     openingNarrationKey: put(`nar.${id}.open`,
       i === 0
-        ? `【第一轮搜证开始】\n${old.background}\n\n现在，去各个地点找线索吧。每人 ${old.search_points ?? 2} 次机会，搜到的线索会公开给所有人。`
-        : `【第${i + 1}轮搜证开始】\n新的区域开放了。第一轮没能解释的疑点，答案也许就在这一轮里。`),
+        ? `第一幕 · 案发之后\n\n${old.background}\n\n` +
+          `各位手上现在是自己的角色本——那里面写着只有你知道的事。\n` +
+          `不用赶，慢慢读完，读完了自己点一下「我读完了」。等所有人都点了，我们才往下走。\n\n` +
+          `接下来这一幕，每人有 ${old.search_points ?? 2} 次搜证机会。\n` +
+          `搜到的东西会当场摊在所有人面前——所以先搜哪里、什么时候搜，本身就是一种表态。`
+        : `第${i + 1}幕 · 越挖越深\n\n` +
+          `新的地方可以去了。上一幕里那些对不上的说法，答案也许就压在这里。\n\n` +
+          `提醒一句：急着撇清自己的人，往往比沉默的人更值得多看两眼。\n` +
+          `还是 ${old.search_points ?? 2} 次机会，用在你最想不通的那个疑点上。`),
     closingNarrationKey: put(`nar.${id}.close`,
       i === searchActs - 1
-        ? `【搜证结束】\n所有线索都摆在桌面上了。接下来，是你们自己的判断。`
-        : `【第${i + 1}轮结束】\n把手上的线索对一对——有些说法，已经开始站不住脚了。`),
+        ? `搜证到此为止\n\n` +
+          `所有能找到的东西，都已经摆在桌面上了。\n` +
+          `剩下的不是运气，是你们怎么把它们串起来。`
+        : `第${i + 1}幕 · 落幕\n\n` +
+          `第一批线索已经摊开了。有些说法，开始站不住脚。\n` +
+          `不必急着指认谁——但请记住此刻让你在意的那个细节，它待会儿可能会救你，也可能会咬你一口。`),
     scriptKeys,
     locations: Object.keys(old.rounds[i].locations).map((n) => locKey[n]),
     searchQuota: { perSeat: old.search_points ?? 2 },
@@ -77,7 +88,10 @@ for (let i = 0; i < searchActs; i++) {
     hints: [{
       afterMin: 12,
       narrationKey: put(`nar.${id}.hint1`,
-        `【提示】还没头绪的话，试着把「谁在什么时间、在什么地方」摆成一条时间线——对不上的那个人，就是突破口。`),
+        `给还卡着的各位一个方向\n\n` +
+        `别再纠结「谁看起来像坏人」了，试着做一件很笨但很管用的事：\n` +
+        `把每个人「几点 · 在哪 · 做了什么」一条条列出来，排成一条时间线。\n\n` +
+        `真相很少藏在谁说了什么，多半藏在——谁的时间对不上。`),
     }],
   });
 }
@@ -94,8 +108,15 @@ acts.push({
   id: voteAct,
   durationMin: 25,
   openingNarrationKey: put(`nar.${voteAct}.open`,
-    `【最后的讨论】\n所有线索都已公开。现在，把你的推理说出来，也听听别人怎么说。\n准备好之后，投票指认你认为的凶手。`),
-  closingNarrationKey: put(`nar.${voteAct}.close`, `【投票结束】\n真相，即将揭晓。`),
+    `最后的讨论\n\n` +
+    `证据到此为止。接下来的时间，属于你们自己。\n\n` +
+    `把你的推理讲出来，也听听别人怎么讲。\n` +
+    `留意那些回避的地方——还有那些，解释得太完整、太顺的说辞。\n\n` +
+    `聊够了，就在「行动」页投出你的一票。所有人投完，真相揭晓。`),
+  closingNarrationKey: put(`nar.${voteAct}.close`,
+    `票投完了\n\n` +
+    `无论你们指认了谁，那一夜发生过的事都不会因此改变。\n` +
+    `现在，让我把它讲给你们听。`),
   scriptKeys: voteScriptKeys,
   locations: [],
   searchQuota: { perSeat: 0 },
@@ -103,7 +124,10 @@ acts.push({
   mechanics: [],
   hints: [{
     afterMin: 15,
-    narrationKey: put(`nar.${voteAct}.hint1`, `【提示】时间不多了。就算不确定，也请投出你最怀疑的那个人。`),
+    narrationKey: put(`nar.${voteAct}.hint1`,
+      `时间不多了\n\n` +
+      `没有人能拿到百分之百的把握，这本来就不是一道有标准答案的题。\n` +
+      `就算还在犹豫，也请投出你此刻最怀疑的那个人——弃权，才是真的把机会让给了凶手。`),
   }],
 });
 
@@ -134,8 +158,17 @@ const votes = [{
     labelKey: put(`vote.final.${c.id}`, c.name),
   })),
   resultBranches: [
-    { match: `unanimous_${old.murderer}`, narrationKey: put("end.allright", `【全场一致】\n所有人都指向了同一个人……这一票，会是对的吗？`) },
-    { match: "split", narrationKey: put("end.split", `【意见分歧】\n你们没能达成一致。真相不会因为投票而改变——让我们看看到底发生了什么。`) },
+    {
+      match: `unanimous_${old.murderer}`,
+      narrationKey: put("end.allright",
+        `全场一致\n\n所有人的手，都指向了同一个人。\n没有分歧，没有犹豫。\n\n这一次，你们没有被骗过去。`),
+    },
+    {
+      match: "split",
+      narrationKey: put("end.split",
+        `意见分歧\n\n你们没能达成一致。\n有人被说服了，有人还在怀疑，还有人从头到尾都没敢确定。\n\n` +
+        `而此刻，凶手也许正在心里松了一口气。\n\n那么——真相，究竟是什么？`),
+    },
   ],
 }];
 

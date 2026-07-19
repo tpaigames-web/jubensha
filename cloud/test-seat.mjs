@@ -1,10 +1,11 @@
-/**
+﻿/**
  * 阶段 1 验收测试：Seat 身份模型
  * 对照《改造实施说明书》第 11 章「身份与恢复」清单逐条验证。
  * 用法：node test-seat.mjs [baseUrl]
  */
 const HTTP = process.argv[2] || "http://127.0.0.1:8788";
 const WSBASE = HTTP.replace(/^http/, "ws");
+import { findFreeRoom } from "./test-util.mjs";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); c ? pass++ : (fail++, process.exitCode = 1); };
@@ -30,7 +31,7 @@ function conn(room) {
   });
 }
 
-const ROOM = String(Math.floor(1000 + Math.random() * 9000));
+const ROOM = await findFreeRoom(WSBASE);
 console.log("测试房号:", ROOM, "| 目标:", HTTP, "\n");
 
 // ---- 1. 四人完整入场 ----
@@ -57,7 +58,7 @@ extra.send({ type: "seat.claim", displayName: "多余的人", pin: "5555" });
 await wait(300);
 ok(extra.last("error")?.code === "room_full", "第5人被拒（房间已满）");
 
-const dupRoom = String(Math.floor(1000 + Math.random() * 9000));
+const dupRoom = await findFreeRoom(WSBASE);
 const d1 = await conn(dupRoom); await wait(200);
 d1.send({ type: "seat.claim", displayName: "同名", pin: "1234" }); await wait(300);
 const d2 = await conn(dupRoom); await wait(200);

@@ -31,6 +31,16 @@ export interface RoomState {
   votes: Record<string, Record<string, string | string[]>>;
   /** mechanicId → 机制内部状态（由各自 validator 定义，引擎不解释） */
   mechanics: Record<string, unknown>;
+  /** 聊天记录。to=null 为公开发言；to=某 seatId 为私聊，仅收发双方可见 */
+  chat: ChatMsg[];
+}
+
+export interface ChatMsg {
+  id: string;
+  from: string;          // seatId
+  to: string | null;     // null=公开
+  text: string;
+  at: number;
 }
 
 export interface Seat {
@@ -78,6 +88,7 @@ export type ClientMsg =
   | { type: "clue.unlock"; locationId: string }
   | { type: "vote.cast"; voteId: string; choice: string | string[] }
   | { type: "mechanic.action"; mechanicId: string; payload: unknown }
+  | { type: "chat.send"; to?: string | null; text: string }
   | { type: "debrief.next" }
   /** 主动索要一次全量快照：操作被拒或客户端自认状态可疑时用 */
   | { type: "snapshot.request" }
@@ -132,6 +143,8 @@ export interface SnapshotFull {
   mechanic: { mechanicId: string; state: unknown; complete: boolean } | null;
   debrief: { id: string; contentKey: string }[];
   narration: { key: string; at: number; text: string }[];
+  /** 本席位可见的聊天：全部公开发言 + 与自己相关的私聊 */
+  chat: (ChatMsg & { fromName: string; toName: string | null })[];
   /** key → 正文。只含本席位【此刻有权】解析的 key（已过 entitledKeys 闸门） */
   content: Record<string, string>;
   /** 仅首次认领时下发一次，客户端需自行持久化 */

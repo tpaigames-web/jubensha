@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 阶段 3+4 验收：服务端权威可见性 + 运行时引擎
  * 用法：node test-engine.mjs [baseUrl]
  *
@@ -7,6 +7,7 @@
  */
 const HTTP = process.argv[2] || "http://127.0.0.1:8788";
 const WSBASE = HTTP.replace(/^http/, "ws");
+import { findFreeRoom } from "./test-util.mjs";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); c ? pass++ : (fail++, process.exitCode = 1); };
@@ -46,7 +47,7 @@ function conn(room) {
   });
 }
 
-const ROOM = String(Math.floor(1000 + Math.random() * 9000));
+const ROOM = await findFreeRoom(WSBASE);
 console.log("测试房号:", ROOM, "| 目标:", HTTP, "\n");
 
 // ---------- 入场 + 选角 ----------
@@ -79,7 +80,8 @@ ok(!r0.includes("【占位-第一幕-P2剧本正文】"), "他人的第一幕正
 
 // ---------- reading → act1 ----------
 console.log("\n【流程】reading → playing[act1]");
-for (const c of P) { c.send({ type: "read.progress", progress: 1 }); await wait(120); }
+// 注意：进度拉满不再等于读完，必须每人显式点「我读完了」
+for (const c of P) { c.send({ type: "read.progress", progress: 1 }); await wait(80); c.send({ type: "act.ready" }); await wait(120); }
 await waitFor(() => P[0].last("snapshot.full")?.room?.actIndex === 0 &&
                     P[0].last("snapshot.full")?.room?.phase === "playing");
 const a1 = P[0].last("snapshot.full");

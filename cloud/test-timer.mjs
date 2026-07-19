@@ -1,10 +1,11 @@
-/**
+﻿/**
  * 计时链路验收：DO Alarm 驱动的「防卡车提示」与「幕超时自动推进」。
  * 用秒级压缩的 fasttest 剧本，验证无人操作时引擎能自己把局推下去。
  * 用法：node test-timer.mjs [baseUrl]
  */
 const HTTP = process.argv[2] || "http://127.0.0.1:8788";
 const WSBASE = HTTP.replace(/^http/, "ws");
+import { findFreeRoom } from "./test-util.mjs";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); c ? pass++ : (fail++, process.exitCode = 1); };
@@ -37,7 +38,7 @@ function conn(room) {
   });
 }
 
-const ROOM = String(Math.floor(1000 + Math.random() * 9000));
+const ROOM = await findFreeRoom(WSBASE, "fasttest");
 console.log("测试房号:", ROOM, "| 目标:", HTTP, "| 剧本: fasttest（秒级压缩）\n");
 
 // 2 人入座并选角
@@ -51,8 +52,9 @@ A.send({ type: "character.pick", characterId: "P1" }); await wait(200);
 B.send({ type: "character.pick", characterId: "P2" });
 ok(await waitFor(() => A.last("snapshot.full")?.room?.phase === "reading"), "进入 reading");
 
-A.send({ type: "read.progress", progress: 1 }); await wait(150);
-B.send({ type: "read.progress", progress: 1 });
+// 进度拉满不再等于读完，必须显式就绪
+A.send({ type: "read.progress", progress: 1 }); A.send({ type: "act.ready" }); await wait(200);
+B.send({ type: "read.progress", progress: 1 }); B.send({ type: "act.ready" });
 // 注意：reading 阶段 actIndex 已是 0，必须同时判 phase，否则会匹配到 reading 的快照
 ok(
   await waitFor(() => {

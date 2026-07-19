@@ -1,10 +1,11 @@
-/**
+﻿/**
  * 传输层冒烟测试：Worker 路由 / DO 隔离 / WebSocket / 输入校验 / 延迟。
  * （地基阶段的 bump/eventSeq 假逻辑已被真实 Seat 模型取代，此文件相应重写）
  * 用法：node test-prod.mjs [baseUrl]
  */
 const HTTP = process.argv[2] || "http://127.0.0.1:8788";
 const WSBASE = HTTP.replace(/^http/, "ws");
+import { findFreeRoom } from "./test-util.mjs";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); c ? pass++ : (fail++, process.exitCode = 1); };
@@ -32,8 +33,8 @@ async function waitFor(fn, ms = 10000) {
   return false;
 }
 
-const R1 = String(Math.floor(1000 + Math.random() * 9000));
-const R2 = String(Math.floor(1000 + Math.random() * 9000));
+const R1 = await findFreeRoom(WSBASE);
+const R2 = await findFreeRoom(WSBASE);
 console.log("目标:", HTTP, "| 房号:", R1, R2, "\n");
 
 const t0 = Date.now();

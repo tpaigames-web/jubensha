@@ -56,6 +56,7 @@ export class RoomDO implements DurableObject {
       debriefUnlocked: [],
       votes: {},
       mechanics: {},
+      chat: [],
     };
     await this.ctx.storage.put(K_ROOM, fresh);
     return fresh;
@@ -222,6 +223,7 @@ export class RoomDO implements DurableObject {
               .map((s) => ({ id: s.id, contentKey: s.contentKey }))
           : [],
       narration,
+      chat: this.chatFor(room, seats, me),
       content,
     };
     if (seatToken) snap.seatToken = seatToken;
@@ -298,6 +300,15 @@ export class RoomDO implements DurableObject {
       if (impl && st !== undefined && !impl.isComplete(st)) return false;
     }
     return true;
+  }
+
+  /** 服务端过滤：公开发言人人可见；私聊只给收发双方 */
+  private chatFor(room: RoomState, seats: SeatMap, me: Seat) {
+    const nameOf = (sid: string | null) => (sid ? seats[sid]?.displayName ?? "?" : null);
+    return room.chat
+      .filter((m) => m.to === null || m.from === me.seatId || m.to === me.seatId)
+      .slice(-200)
+      .map((m) => ({ ...m, fromName: nameOf(m.from) ?? "?", toName: nameOf(m.to) }));
   }
 
   private async pushSnapshotAll(room: RoomState, seats: SeatMap): Promise<void> {
@@ -380,8 +391,13 @@ export class RoomDO implements DurableObject {
     return Object.values(seats).every((s) => !!s.characterId);
   }
 
+  /**
+   * 「读完了」只认玩家自己点的就绪，不认滚动进度。
+   * 否则有人一拉到底就被判定读完，整幕直接被跳过。
+   * readProgress 仅用于让大家看到彼此的阅读进度条。
+   */
   private allRead(seats: SeatMap): boolean {
-    return Object.values(seats).every((s) => s.readProgress >= 0.95 || s.ready);
+    return Object.values(seats).every((s) => s.ready);
   }
 
   private allReady(seats: SeatMap): boolean {
@@ -825,6 +841,35 @@ export class RoomDO implements DurableObject {
             else this.broadcast({ type: "mechanic.event", mechanicId: mid, ...ev });
           }
         });
+
+      case "chat.send": {
+        const att = this.attachmentOf(ws);
+        if (!att?.seatId) return this.send(ws, { type: "error", code: ERR.NOT_SEATED, message: "尚未入座" });
+        const seats = await this.getSeats();
+        const me = seats[att.seatId];
+        if (!me) return this.send(ws, { type: "error", code: ERR.SEAT_NOT_FOUND, message: "席位已不存在" });
+
+        const text = String(msg.text ?? "").trim().slice(0, 500);
+        if (!text) return this.send(ws, { type: "error", code: ERR.BAD_INPUT, message: "内容不能为空" });
+        const to = msg.to ? String(msg.to) : null;
+        if (to && !seats[to]) return this.send(ws, { type: "error", code: ERR.BAD_INPUT, message: "私聊对象不存在" });
+        if (to === me.seatId) return this.send(ws, { type: "error", code: ERR.BAD_INPUT, message: "不能私聊自己" });
+
+        const m2 = { id: newId("msg"), from: me.seatId, to, text, at: Date.now() };
+        room.chat.push(m2);
+        if (room.chat.length > 400) room.chat.splice(0, room.chat.length - 400);
+        await this.putRoom(room);
+
+        // 公开发言推给全场；私聊只推给收发双方（服务端裁决，不靠前端隐藏）
+        if (to === null) await this.pushSnapshotAll(room, seats);
+        else {
+          for (const sid of [me.seatId, to]) {
+            const s = seats[sid];
+            if (s) this.sendToSeat(sid, this.snapshot(room, seats, s));
+          }
+        }
+        return;
+      }
 
       case "debrief.next":
         return this.withSeat(ws, room, () => {

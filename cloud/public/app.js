@@ -20,7 +20,7 @@ const S = {
   offset: 0,           // serverNow - Date.now()
   tab: "script",
   narration: [],
-  seen: { clue: 0, dm: 0 },
+  seen: { clue: 0, dm: 0, chat: 0 },
   connected: false,
   retry: 0,
   sound: true,
@@ -150,7 +150,7 @@ function handle(m) {
       S.narration.push({ key: m.key, at: m.at || serverNow(), text: m.text, style: m.style });
       if (S.tab !== "dm") { $("n-dm").style.display = "inline-block"; $("n-dm").textContent = S.narration.length - S.seen.dm; }
       renderDM();
-      speak(m.text);
+      showNarration(m.text);   // 文字弹层 + 朗读，可跳过
       break;
 
     case "act.changed":
@@ -354,7 +354,11 @@ function renderGame() {
   $("g-phase").textContent = st.room.phase === "playing"
     ? `第${st.room.actIndex + 1}幕 / ${st.script.actCount}`
     : phaseName(st.room.phase);
-  renderScript(); renderClue(); renderAct(); renderDM(); renderActionBar();
+  renderScript(); renderClue(); renderAct(); renderChat(); renderDM(); renderActionBar();
+  // 讨论区未读角标
+  const n = (st.chat || []).length - S.seen.chat;
+  if (S.tab !== "chat" && n > 0) { $("n-chat").textContent = n; $("n-chat").style.display = "inline-block"; }
+  else $("n-chat").style.display = "none";
   tickTimer();
 }
 
@@ -379,7 +383,7 @@ function renderScript() {
 
   $("p-script").innerHTML = body + `
     <div class="card"><h2>📚 阅读进度</h2>${others}
-      <p class="hint" style="margin-top:8px">全员读完会自动推进，不用等人喊。</p>
+      <p class="hint" style="margin-top:8px">进度条只是给大家看看谁还在读。<b>必须每个人自己点下面的「我读完了」</b>才会推进——滚到底不算数，慢慢看。</p>
     </div>`;
 }
 
@@ -597,17 +601,107 @@ function bindMechanic() {
   });
 }
 
-// --- 播报页 ---
+// --- 播报：弹层（文字必现，朗读可跳过） ---
+function showNarration(text) {
+  $("dm-pop-text").textContent = text;
+  $("dm-pop").style.display = "flex";
+  speak(text);
+}
+function closeNarration() { $("dm-pop").style.display = "none"; stopSpeak(); }
+$("dm-skip").onclick = () => { stopSpeak(); toast("已跳过朗读，文字保留在【播报】页", true); };
+$("dm-ok").onclick = closeNarration;
+$("dm-pop").onclick = (e) => { if (e.target.id === "dm-pop") closeNarration(); };
+
+// --- 播报页（历史，可重播） ---
 function renderDM() {
   const html = S.narration.length
-    ? S.narration.slice().reverse().map((n) => `
+    ? S.narration.slice().reverse().map((n, i) => `
       <div class="narration ${esc(n.style || "")}">
-        <div class="t">${new Date(n.at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</div>
-        ${esc(n.text)}
+        <div class="t">${new Date(n.at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
+          <button class="btn ghost" style="float:right;min-height:32px;padding:4px 10px;font-size:.85em" data-replay="${S.narration.length - 1 - i}">🔊 重播</button>
+        </div>
+        <div style="white-space:pre-wrap">${esc(n.text)}</div>
       </div>`).join("")
     : '<div class="card"><p class="hint">主持人还没有说话。</p></div>';
   $("p-dm").innerHTML = html;
+  $("p-dm").querySelectorAll("[data-replay]").forEach((el) => {
+    el.onclick = () => { const n = S.narration[Number(el.dataset.replay)]; if (n) showNarration(n.text); };
+  });
   if (S.tab === "dm") { S.seen.dm = S.narration.length; $("n-dm").style.display = "none"; }
+}
+
+// --- 聊天页：公开 + 私聊 ---
+// 面板只搭一次；之后每次快照只刷新消息列表，
+// 否则正在输入的文字和已选的私聊对象会被冲掉。
+function renderChat() {
+  const st = S.st;
+  if (!st) return;
+  if (!$("chat-list")) buildChatPanel();
+  updateChatTargets();
+  renderChatMessages();
+  if (S.tab === "chat") { S.seen.chat = (st.chat || []).length; $("n-chat").style.display = "none"; }
+}
+
+function buildChatPanel() {
+  $("p-chat").innerHTML = `
+    <div class="card">
+      <div class="chat-list" id="chat-list"></div>
+      <div class="chat-bar">
+        <select id="chat-to"></select>
+        <input id="chat-input" class="grow" maxlength="500" placeholder="说点什么…">
+        <button class="btn primary" id="chat-send" style="flex:none">发送</button>
+      </div>
+    </div>`;
+  const sel = $("chat-to");
+  sel.onchange = () => { S._chatTo = sel.value; };
+  const doSend = () => {
+    const el = $("chat-input");
+    const v = el.value.trim();
+    if (!v) return;
+    send({ type: "chat.send", to: $("chat-to").value || null, text: v });
+    el.value = "";
+  };
+  $("chat-send").onclick = doSend;
+  $("chat-input").onkeydown = (e) => { if (e.key === "Enter") doSend(); };
+}
+
+/** 席位名单变化时才重建下拉，并保住当前选择 */
+function updateChatTargets() {
+  const st = S.st, sel = $("chat-to");
+  const others = st.seats.filter((s) => s.seatId !== st.me.seatId);
+  const sig = others.map((s) => s.seatId + ":" + s.characterId).join("|");
+  if (sel.dataset.sig === sig) return;
+  sel.dataset.sig = sig;
+  const keep = S._chatTo || sel.value || "";
+  sel.innerHTML = ['<option value="">公开发言（所有人可见）</option>']
+    .concat(others.map((s) => {
+      const cn = st.content[(st.script.characters.find((c) => c.id === s.characterId) || {}).nameKey];
+      return `<option value="${esc(s.seatId)}">🔒 私聊 ${esc(s.displayName)}${cn ? "（" + esc(cn) + "）" : ""}</option>`;
+    })).join("");
+  if ([...sel.options].some((o) => o.value === keep)) sel.value = keep;
+}
+
+function renderChatMessages() {
+  const st = S.st;
+  const msgs = st.chat || [];
+  const list = msgs.map((m) => {
+    const mine = m.from === st.me.seatId;
+    const pm = m.to !== null;
+    const who = mine ? "我" : m.fromName;
+    const label = pm ? (mine ? `私聊 → ${m.toName}` : `${who} 私聊我`) : who;
+    return `<div class="msg ${mine ? "me" : ""} ${pm ? "pm" : ""}">
+      <div class="meta">${esc(label)} · ${new Date(m.at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</div>
+      <div style="white-space:pre-wrap">${esc(m.text)}</div>
+    </div>`;
+  }).join("");
+
+  const box = $("chat-list");
+  const html = list || '<p class="hint">还没有人说话。公开发言所有人可见；私聊只有对方能看到。</p>';
+  if (box.dataset.n !== String(msgs.length)) {
+    box.dataset.n = String(msgs.length);
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+  }
 }
 
 // --- 底部操作条 ---
@@ -621,7 +715,8 @@ function renderActionBar() {
       ? `<button class="btn ghost wide" disabled>已就绪，等待其他人…（${st.seats.filter((s) => s.ready).length}/${st.seats.length}）</button>`
       : `<button class="btn primary wide" id="btn-ready">✅ 我读完了 / 准备推进</button>`;
     const b = $("btn-ready");
-    if (b) b.onclick = () => { send({ type: "read.progress", progress: 1 }); send({ type: "act.ready" }); };
+    // 只有点了这个按钮才算读完；滚到底不再自动判定，避免有人一拉到底就把整幕跳过
+    if (b) b.onclick = () => send({ type: "act.ready" });
     return;
   }
 
@@ -676,6 +771,7 @@ document.querySelectorAll(".tab").forEach((el) => {
     document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
     $("p-" + S.tab).classList.add("active");
     if (S.tab === "dm") { S.seen.dm = S.narration.length; $("n-dm").style.display = "none"; }
+    if (S.tab === "chat" && S.st) { S.seen.chat = (S.st.chat || []).length; $("n-chat").style.display = "none"; renderChat(); }
     window.scrollTo(0, 0);
   };
 });
@@ -700,10 +796,14 @@ $("btn-sound").onclick = () => {
 function speak(text) {
   if (!S.sound || !text || !window.speechSynthesis) return;
   try {
-    const u = new SpeechSynthesisUtterance(String(text).replace(/【|】/g, ""));
-    u.lang = "zh-CN"; u.rate = 1.05;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text).replace(/[【】]/g, " "));
+    u.lang = "zh-CN"; u.rate = 1.02;
     speechSynthesis.speak(u);
   } catch {}
+}
+function stopSpeak() {
+  try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch {}
 }
 // 移动端必须在用户手势里解锁音频
 function unlockAudio() {
