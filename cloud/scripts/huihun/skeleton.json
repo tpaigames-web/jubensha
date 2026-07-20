@@ -1,0 +1,478 @@
+{
+  "scriptId": "huihun",
+  "schemaVersion": 1,
+  "meta": {
+    "titleKey": "meta.title",
+    "players": 6,
+    "durationMin": 65,
+    "type": "whodunit"
+  },
+  "characters": [
+    {
+      "id": "shenjingru",
+      "nameKey": "char.shenjingru.name",
+      "briefKey": "char.shenjingru.brief"
+    },
+    {
+      "id": "shenwangshi",
+      "nameKey": "char.shenwangshi.name",
+      "briefKey": "char.shenwangshi.brief"
+    },
+    {
+      "id": "baihedaozhang",
+      "nameKey": "char.baihedaozhang.name",
+      "briefKey": "char.baihedaozhang.brief"
+    },
+    {
+      "id": "axiu",
+      "nameKey": "char.axiu.name",
+      "briefKey": "char.axiu.brief"
+    },
+    {
+      "id": "chenzhong",
+      "nameKey": "char.chenzhong.name",
+      "briefKey": "char.chenzhong.brief"
+    },
+    {
+      "id": "shenyue",
+      "nameKey": "char.shenyue.name",
+      "briefKey": "char.shenyue.brief"
+    }
+  ],
+  "acts": [
+    {
+      "id": "act1",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act1.open",
+      "closingNarrationKey": "nar.act1.close",
+      "scriptKeys": {
+        "shenjingru": "script.act1.shenjingru",
+        "shenwangshi": "script.act1.shenwangshi",
+        "baihedaozhang": "script.act1.baihedaozhang",
+        "axiu": "script.act1.axiu",
+        "chenzhong": "script.act1.chenzhong",
+        "shenyue": "script.act1.shenyue"
+      },
+      "locations": [
+        "loc.1",
+        "loc.2",
+        "loc.3",
+        "loc.4",
+        "loc.5",
+        "loc.6"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "all_read"
+        ],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act1.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act2",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act2.open",
+      "closingNarrationKey": "nar.act2.close",
+      "scriptKeys": {
+        "shenjingru": "script.act2.shenjingru",
+        "shenwangshi": "script.act2.shenwangshi",
+        "baihedaozhang": "script.act2.baihedaozhang",
+        "axiu": "script.act2.axiu",
+        "chenzhong": "script.act2.chenzhong",
+        "shenyue": "script.act2.shenyue"
+      },
+      "locations": [
+        "loc.1",
+        "loc.2",
+        "loc.3",
+        "loc.4",
+        "loc.5",
+        "loc.6"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act2.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act3",
+      "durationMin": 25,
+      "openingNarrationKey": "nar.act3.open",
+      "closingNarrationKey": "nar.act3.close",
+      "scriptKeys": {
+        "shenjingru": "script.act3.shenjingru",
+        "shenwangshi": "script.act3.shenwangshi",
+        "baihedaozhang": "script.act3.baihedaozhang",
+        "axiu": "script.act3.axiu",
+        "chenzhong": "script.act3.chenzhong",
+        "shenyue": "script.act3.shenyue"
+      },
+      "locations": [],
+      "searchQuota": {
+        "perSeat": 0
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "vote_done"
+        ],
+        "timeoutMin": 30
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 15,
+          "narrationKey": "nar.act3.hint1"
+        }
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "h1_tea",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.h1_tea",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_seal",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.h1_seal",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_debt",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.h1_debt",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_mess",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.h1_mess",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_prescription",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.h1_prescription",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_envelope",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.h1_envelope",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_dregs",
+      "act": "act1",
+      "location": "loc.4",
+      "contentKey": "clue.h1_dregs",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_missing",
+      "act": "act1",
+      "location": "loc.4",
+      "contentKey": "clue.h1_missing",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_thread",
+      "act": "act1",
+      "location": "loc.5",
+      "contentKey": "clue.h1_thread",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_oil",
+      "act": "act1",
+      "location": "loc.5",
+      "contentKey": "clue.h1_oil",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_tricks",
+      "act": "act1",
+      "location": "loc.6",
+      "contentKey": "clue.h1_tricks",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h1_loot",
+      "act": "act1",
+      "location": "loc.6",
+      "contentKey": "clue.h1_loot",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_autopsy",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.h2_autopsy",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_twoline",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.h2_twoline",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_note",
+      "act": "act2",
+      "location": "loc.2",
+      "contentKey": "clue.h2_note",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_watch",
+      "act": "act2",
+      "location": "loc.2",
+      "contentKey": "clue.h2_watch",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_letter",
+      "act": "act2",
+      "location": "loc.3",
+      "contentKey": "clue.h2_letter",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_ledger",
+      "act": "act2",
+      "location": "loc.3",
+      "contentKey": "clue.h2_ledger",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_delivery",
+      "act": "act2",
+      "location": "loc.4",
+      "contentKey": "clue.h2_delivery",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_hideout",
+      "act": "act2",
+      "location": "loc.4",
+      "contentKey": "clue.h2_hideout",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_button",
+      "act": "act2",
+      "location": "loc.5",
+      "contentKey": "clue.h2_button",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_diary",
+      "act": "act2",
+      "location": "loc.5",
+      "contentKey": "clue.h2_diary",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_memo",
+      "act": "act2",
+      "location": "loc.6",
+      "contentKey": "clue.h2_memo",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "h2_pillow",
+      "act": "act2",
+      "location": "loc.6",
+      "contentKey": "clue.h2_pillow",
+      "visibility": {
+        "type": "public"
+      }
+    }
+  ],
+  "votes": [
+    {
+      "id": "vote.final",
+      "act": "act3",
+      "mode": "single_public",
+      "promptKey": "vote.final.prompt",
+      "options": [
+        {
+          "id": "shenjingru",
+          "labelKey": "vote.final.shenjingru"
+        },
+        {
+          "id": "shenwangshi",
+          "labelKey": "vote.final.shenwangshi"
+        },
+        {
+          "id": "baihedaozhang",
+          "labelKey": "vote.final.baihedaozhang"
+        },
+        {
+          "id": "axiu",
+          "labelKey": "vote.final.axiu"
+        },
+        {
+          "id": "chenzhong",
+          "labelKey": "vote.final.chenzhong"
+        },
+        {
+          "id": "shenyue",
+          "labelKey": "vote.final.shenyue"
+        }
+      ],
+      "resultBranches": [
+        {
+          "match": "unanimous_chenzhong",
+          "narrationKey": "end.allright"
+        },
+        {
+          "match": "majority_shenjingru",
+          "narrationKey": "end.maj.shenjingru"
+        },
+        {
+          "match": "majority_shenwangshi",
+          "narrationKey": "end.maj.shenwangshi"
+        },
+        {
+          "match": "majority_baihedaozhang",
+          "narrationKey": "end.maj.baihedaozhang"
+        },
+        {
+          "match": "majority_axiu",
+          "narrationKey": "end.maj.axiu"
+        },
+        {
+          "match": "majority_chenzhong",
+          "narrationKey": "end.maj.right"
+        },
+        {
+          "match": "majority_shenyue",
+          "narrationKey": "end.maj.shenyue"
+        },
+        {
+          "match": "split",
+          "narrationKey": "end.split"
+        }
+      ]
+    }
+  ],
+  "mechanics": [],
+  "debrief": {
+    "segments": [
+      {
+        "id": "d1",
+        "contentKey": "debrief.1",
+        "unlock": "manual"
+      },
+      {
+        "id": "d2",
+        "contentKey": "debrief.2",
+        "unlock": "manual"
+      },
+      {
+        "id": "d3",
+        "contentKey": "debrief.3",
+        "unlock": "manual"
+      },
+      {
+        "id": "d4",
+        "contentKey": "debrief.4",
+        "unlock": "manual"
+      },
+      {
+        "id": "d5",
+        "contentKey": "debrief.5",
+        "unlock": "manual"
+      },
+      {
+        "id": "d6",
+        "contentKey": "debrief.6",
+        "unlock": "manual"
+      },
+      {
+        "id": "d7",
+        "contentKey": "debrief.7",
+        "unlock": "manual"
+      }
+    ]
+  }
+}

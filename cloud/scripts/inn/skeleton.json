@@ -1,0 +1,360 @@
+{
+  "scriptId": "inn",
+  "schemaVersion": 1,
+  "meta": {
+    "titleKey": "meta.title",
+    "players": 4,
+    "durationMin": 65,
+    "type": "whodunit"
+  },
+  "characters": [
+    {
+      "id": "shensandao",
+      "nameKey": "char.shensandao.name",
+      "briefKey": "char.shensandao.brief"
+    },
+    {
+      "id": "liuruyan",
+      "nameKey": "char.liuruyan.name",
+      "briefKey": "char.liuruyan.brief"
+    },
+    {
+      "id": "baixiansheng",
+      "nameKey": "char.baixiansheng.name",
+      "briefKey": "char.baixiansheng.brief"
+    },
+    {
+      "id": "afu",
+      "nameKey": "char.afu.name",
+      "briefKey": "char.afu.brief"
+    }
+  ],
+  "acts": [
+    {
+      "id": "act1",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act1.open",
+      "closingNarrationKey": "nar.act1.close",
+      "scriptKeys": {
+        "shensandao": "script.act1.shensandao",
+        "liuruyan": "script.act1.liuruyan",
+        "baixiansheng": "script.act1.baixiansheng",
+        "afu": "script.act1.afu"
+      },
+      "locations": [
+        "loc.1",
+        "loc.2",
+        "loc.3",
+        "loc.4"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "all_read"
+        ],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act1.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act2",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act2.open",
+      "closingNarrationKey": "nar.act2.close",
+      "scriptKeys": {
+        "shensandao": "script.act2.shensandao",
+        "liuruyan": "script.act2.liuruyan",
+        "baixiansheng": "script.act2.baixiansheng",
+        "afu": "script.act2.afu"
+      },
+      "locations": [
+        "loc.1",
+        "loc.5",
+        "loc.6",
+        "loc.7"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act2.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act3",
+      "durationMin": 25,
+      "openingNarrationKey": "nar.act3.open",
+      "closingNarrationKey": "nar.act3.close",
+      "scriptKeys": {
+        "shensandao": "script.act3.shensandao",
+        "liuruyan": "script.act3.liuruyan",
+        "baixiansheng": "script.act3.baixiansheng",
+        "afu": "script.act3.afu"
+      },
+      "locations": [],
+      "searchQuota": {
+        "perSeat": 0
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "vote_done"
+        ],
+        "timeoutMin": 30
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 15,
+          "narrationKey": "nar.act3.hint1"
+        }
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "i1_knife",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.i1_knife",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i1_axe",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.i1_axe",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i1_ledger",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.i1_ledger",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i1_secret",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.i1_secret",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i1_footprint",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.i1_footprint",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i1_water",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.i1_water",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i1_snow",
+      "act": "act1",
+      "location": "loc.4",
+      "contentKey": "clue.i1_snow",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i1_well",
+      "act": "act1",
+      "location": "loc.4",
+      "contentKey": "clue.i1_well",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i2_letter",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.i2_letter",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i2_nail",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.i2_nail",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i2_muyu",
+      "act": "act2",
+      "location": "loc.5",
+      "contentKey": "clue.i2_muyu",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i2_notice",
+      "act": "act2",
+      "location": "loc.5",
+      "contentKey": "clue.i2_notice",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i2_seal",
+      "act": "act2",
+      "location": "loc.6",
+      "contentKey": "clue.i2_seal",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i2_dagger",
+      "act": "act2",
+      "location": "loc.6",
+      "contentKey": "clue.i2_dagger",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i2_wound",
+      "act": "act2",
+      "location": "loc.7",
+      "contentKey": "clue.i2_wound",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "i2_tablet",
+      "act": "act2",
+      "location": "loc.7",
+      "contentKey": "clue.i2_tablet",
+      "visibility": {
+        "type": "public"
+      }
+    }
+  ],
+  "votes": [
+    {
+      "id": "vote.final",
+      "act": "act3",
+      "mode": "single_public",
+      "promptKey": "vote.final.prompt",
+      "options": [
+        {
+          "id": "shensandao",
+          "labelKey": "vote.final.shensandao"
+        },
+        {
+          "id": "liuruyan",
+          "labelKey": "vote.final.liuruyan"
+        },
+        {
+          "id": "baixiansheng",
+          "labelKey": "vote.final.baixiansheng"
+        },
+        {
+          "id": "afu",
+          "labelKey": "vote.final.afu"
+        }
+      ],
+      "resultBranches": [
+        {
+          "match": "unanimous_afu",
+          "narrationKey": "end.allright"
+        },
+        {
+          "match": "majority_shensandao",
+          "narrationKey": "end.maj.shensandao"
+        },
+        {
+          "match": "majority_liuruyan",
+          "narrationKey": "end.maj.liuruyan"
+        },
+        {
+          "match": "majority_baixiansheng",
+          "narrationKey": "end.maj.baixiansheng"
+        },
+        {
+          "match": "majority_afu",
+          "narrationKey": "end.maj.right"
+        },
+        {
+          "match": "split",
+          "narrationKey": "end.split"
+        }
+      ]
+    }
+  ],
+  "mechanics": [],
+  "debrief": {
+    "segments": [
+      {
+        "id": "d1",
+        "contentKey": "debrief.1",
+        "unlock": "manual"
+      },
+      {
+        "id": "d2",
+        "contentKey": "debrief.2",
+        "unlock": "manual"
+      },
+      {
+        "id": "d3",
+        "contentKey": "debrief.3",
+        "unlock": "manual"
+      },
+      {
+        "id": "d4",
+        "contentKey": "debrief.4",
+        "unlock": "manual"
+      },
+      {
+        "id": "d5",
+        "contentKey": "debrief.5",
+        "unlock": "manual"
+      }
+    ]
+  }
+}

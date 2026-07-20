@@ -1,0 +1,311 @@
+{
+  "scriptId": "lighthouse",
+  "schemaVersion": 1,
+  "meta": {
+    "titleKey": "meta.title",
+    "players": 3,
+    "durationMin": 65,
+    "type": "whodunit"
+  },
+  "characters": [
+    {
+      "id": "linyan",
+      "nameKey": "char.linyan.name",
+      "briefKey": "char.linyan.brief"
+    },
+    {
+      "id": "suqing",
+      "nameKey": "char.suqing.name",
+      "briefKey": "char.suqing.brief"
+    },
+    {
+      "id": "zhou",
+      "nameKey": "char.zhou.name",
+      "briefKey": "char.zhou.brief"
+    }
+  ],
+  "acts": [
+    {
+      "id": "act1",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act1.open",
+      "closingNarrationKey": "nar.act1.close",
+      "scriptKeys": {
+        "linyan": "script.act1.linyan",
+        "suqing": "script.act1.suqing",
+        "zhou": "script.act1.zhou"
+      },
+      "locations": [
+        "loc.1",
+        "loc.2",
+        "loc.3"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "all_read"
+        ],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act1.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act2",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act2.open",
+      "closingNarrationKey": "nar.act2.close",
+      "scriptKeys": {
+        "linyan": "script.act2.linyan",
+        "suqing": "script.act2.suqing",
+        "zhou": "script.act2.zhou"
+      },
+      "locations": [
+        "loc.1",
+        "loc.4",
+        "loc.5"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act2.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act3",
+      "durationMin": 25,
+      "openingNarrationKey": "nar.act3.open",
+      "closingNarrationKey": "nar.act3.close",
+      "scriptKeys": {
+        "linyan": "script.act3.linyan",
+        "suqing": "script.act3.suqing",
+        "zhou": "script.act3.zhou"
+      },
+      "locations": [],
+      "searchQuota": {
+        "perSeat": 0
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "vote_done"
+        ],
+        "timeoutMin": 30
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 15,
+          "narrationKey": "nar.act3.hint1"
+        }
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "l1_rail",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.l1_rail",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l1_switch",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.l1_switch",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l1_letter",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.l1_letter",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l1_photo",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.l1_photo",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l1_quarrel",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.l1_quarrel",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l1_radio",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.l1_radio",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l2_button",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.l2_button",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l2_fiber",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.l2_fiber",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l2_boat",
+      "act": "act2",
+      "location": "loc.4",
+      "contentKey": "clue.l2_boat",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l2_landing",
+      "act": "act2",
+      "location": "loc.4",
+      "contentKey": "clue.l2_landing",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l2_ledger",
+      "act": "act2",
+      "location": "loc.5",
+      "contentKey": "clue.l2_ledger",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "l2_bankcard",
+      "act": "act2",
+      "location": "loc.5",
+      "contentKey": "clue.l2_bankcard",
+      "visibility": {
+        "type": "public"
+      }
+    }
+  ],
+  "votes": [
+    {
+      "id": "vote.final",
+      "act": "act3",
+      "mode": "single_public",
+      "promptKey": "vote.final.prompt",
+      "options": [
+        {
+          "id": "linyan",
+          "labelKey": "vote.final.linyan"
+        },
+        {
+          "id": "suqing",
+          "labelKey": "vote.final.suqing"
+        },
+        {
+          "id": "zhou",
+          "labelKey": "vote.final.zhou"
+        }
+      ],
+      "resultBranches": [
+        {
+          "match": "unanimous_zhou",
+          "narrationKey": "end.allright"
+        },
+        {
+          "match": "majority_linyan",
+          "narrationKey": "end.maj.linyan"
+        },
+        {
+          "match": "majority_suqing",
+          "narrationKey": "end.maj.suqing"
+        },
+        {
+          "match": "majority_zhou",
+          "narrationKey": "end.maj.right"
+        },
+        {
+          "match": "split",
+          "narrationKey": "end.split"
+        }
+      ]
+    }
+  ],
+  "mechanics": [],
+  "debrief": {
+    "segments": [
+      {
+        "id": "d1",
+        "contentKey": "debrief.1",
+        "unlock": "manual"
+      },
+      {
+        "id": "d2",
+        "contentKey": "debrief.2",
+        "unlock": "manual"
+      },
+      {
+        "id": "d3",
+        "contentKey": "debrief.3",
+        "unlock": "manual"
+      },
+      {
+        "id": "d4",
+        "contentKey": "debrief.4",
+        "unlock": "manual"
+      },
+      {
+        "id": "d5",
+        "contentKey": "debrief.5",
+        "unlock": "manual"
+      },
+      {
+        "id": "d6",
+        "contentKey": "debrief.6",
+        "unlock": "manual"
+      }
+    ]
+  }
+}

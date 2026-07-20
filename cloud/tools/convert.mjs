@@ -6,9 +6,10 @@
  * 用法: node tools/convert.mjs <旧剧本路径> <新剧本id>
  * 例:   node tools/convert.mjs ../scripts/radio.json radio
  */
-import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const [srcPath, newId] = process.argv.slice(2);
@@ -20,6 +21,54 @@ if (!srcPath || !newId) {
 const old = JSON.parse(readFileSync(resolve(__dir, srcPath), "utf8"));
 const C = {};                     // content pack
 const put = (k, v) => { C[k] = String(v ?? ""); return k; };
+
+/**
+ * 增补层：tools/enrich/<id>.mjs（有就用，没有就退回旧数据）。
+ * 老剧本每人只有两三百字，且完全没写角色之间的关系——没有关系，
+ * 三个小时里就没人知道该跟谁说话。这些是要真写的东西，机械转换给不出来，
+ * 所以单独放一层，由人（或我）逐本补。
+ *
+ *   export default {
+ *     roles: { <角色id>: { story, rel: { <另一角色id>: "…" }, act2, act3 } },
+ *     opening: "…可选：覆盖第一幕开场播报的引子…",
+ *   }
+ */
+const enrichPath = resolve(__dir, "enrich", `${newId}.mjs`);
+const EN = existsSync(enrichPath)
+  ? (await import(pathToFileURL(enrichPath).href)).default
+  : { roles: {} };
+const role = (id) => EN.roles?.[id] ?? {};
+const nameOf = (id) => old.characters.find((c) => c.id === id)?.name ?? id;
+
+/** 没有真人主持，规则得写进本子里 */
+const HOWTO = (searchPerAct) => `
+———
+
+【怎么玩】
+这一局没有真人主持。分幕、放线索、计时、结算，全部由程序来做。
+
+· 先读自己的本。读完点「我读完了」，所有人都点了才会进下一幕——不要替别人跳过。
+· 每一幕你有 ${searchPerAct} 次搜证机会，搜到的东西会当场摆在所有人面前。
+· 你手上有别人不知道的事。**什么时候说、说多少、要不要说，是你自己的选择**，这就是这个本的玩法。
+· 讨论区可以公开发言，也可以单独找某一个人私聊。
+· 卡住的时候等一等，主持人会自己放提示。
+`.trim();
+
+/**
+ * 【你和他们】。逐个写出这个角色眼里的其他人。
+ *
+ * 增补层只需要写「有渊源」的那几对；这些本里很多角色本来就是陌生人
+ * （荒岛、客栈、萍水相逢），硬编出交情反而假。没写的自动退回对方的公开身份，
+ * 也就是「你只知道他自称是谁」——对陌生人来说这才是对的。
+ */
+function relationBlock(c) {
+  const r = role(c.id).rel ?? {};
+  const body = old.characters
+    .filter((x) => x.id !== c.id)
+    .map((o) => `**${o.name}**——${r[o.id] ?? `你今晚才见到他。他自称${o.brief}。${o.public}`}`)
+    .join("\n\n");
+  return `【你和他们】\n\n${body}`;
+}
 
 // ---- 元信息 ----
 put("meta.title", old.title);
@@ -48,14 +97,24 @@ for (let i = 0; i < searchActs; i++) {
   const scriptKeys = {};
   for (const c of old.characters) {
     if (i === 0) {
-      // 第一幕给完整角色本
-      scriptKeys[c.id] = put(`script.${id}.${c.id}`,
-        `${c.story}\n\n【你的秘密】\n${c.secrets.map((s, n) => `${n + 1}. ${s}`).join("\n")}` +
-        `\n\n【你的任务】\n${c.goals.map((g, n) => `${n + 1}. ${g}`).join("\n")}`);
+      // 第一幕：公共背景 + 玩法 + 个人本 + 关系 + 目标 + 秘密
+      scriptKeys[c.id] = put(`script.${id}.${c.id}`, [
+        old.background,
+        HOWTO(old.search_points ?? 2),
+        `———\n\n【你是谁】\n${role(c.id).story ?? c.story}`,
+        relationBlock(c),
+        `【你今晚要做到的】\n\n${c.goals.map((g, n) => `${n + 1}. ${g}`).join("\n")}`,
+        `【你不能让人知道的】\n\n${c.secrets.map((s) => `· ${s}`).join("\n")}`,
+      ].join("\n\n"));
     } else {
+      // 第二幕起：给这个人自己的处境，而不是所有人一份同样的模板
       scriptKeys[c.id] = put(`script.${id}.${c.id}`,
-        `【第${i + 1}轮搜证】\n带着上一轮的发现，重新审视每个人的说辞——谁的时间线对不上？谁在回避什么？\n\n` +
-        `别忘了你的任务：\n${c.goals.map((g, n) => `${n + 1}. ${g}`).join("\n")}`);
+        role(c.id)[`act${i + 1}`] ??
+        `【第${i + 1}幕】\n\n第一批线索摊开了。有些说法开始站不住脚——包括你自己的。\n\n` +
+        `你现在要盯住两件事：\n` +
+        `一、有没有哪条线索，正在往你身上指。\n` +
+        `二、你手上那些不能说的事，还瞒得住多久。\n\n` +
+        `【别忘了你要做到的】\n${c.goals.map((g, n) => `${n + 1}. ${g}`).join("\n")}`);
     }
   }
   acts.push({
@@ -63,8 +122,9 @@ for (let i = 0; i < searchActs; i++) {
     durationMin: 20,
     openingNarrationKey: put(`nar.${id}.open`,
       i === 0
-        ? `第一幕 · 案发之后\n\n${old.background}\n\n` +
-          `各位手上现在是自己的角色本——那里面写着只有你知道的事。\n` +
+        ? `第一幕 · 案发之后\n\n` +
+          (EN.opening ?? `${String(old.tagline ?? "").trim()}\n\n`) +
+          `各位手上现在是自己的角色本——公共背景、你的来历、你的目标、你不能说的事，都在里面。\n` +
           `不用赶，慢慢读完，读完了自己点一下「我读完了」。等所有人都点了，我们才往下走。\n\n` +
           `接下来这一幕，每人有 ${old.search_points ?? 2} 次搜证机会。\n` +
           `搜到的东西会当场摊在所有人面前——所以先搜哪里、什么时候搜，本身就是一种表态。`
@@ -101,8 +161,11 @@ const voteAct = `act${searchActs + 1}`;
 const voteScriptKeys = {};
 for (const c of old.characters) {
   voteScriptKeys[c.id] = put(`script.${voteAct}.${c.id}`,
-    `【最后的讨论】\n证据到此为止了。接下来是自由辩论，然后投票指认。\n\n` +
-    `别忘了你的任务：\n${c.goals.map((g, n) => `${n + 1}. ${g}`).join("\n")}`);
+    role(c.id).actLast ??
+    `【最后的讨论】\n\n证据到此为止了。接下来是自由辩论，然后投票指认。\n\n` +
+    `投票之前，先想清楚一件事：你手上那些没说出口的，现在说还来得及。\n` +
+    `等票投完了，说什么都只是解释。\n\n` +
+    `【别忘了你要做到的】\n${c.goals.map((g, n) => `${n + 1}. ${g}`).join("\n")}`);
 }
 acts.push({
   id: voteAct,

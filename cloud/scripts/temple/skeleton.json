@@ -1,0 +1,311 @@
+{
+  "scriptId": "temple",
+  "schemaVersion": 1,
+  "meta": {
+    "titleKey": "meta.title",
+    "players": 3,
+    "durationMin": 65,
+    "type": "whodunit"
+  },
+  "characters": [
+    {
+      "id": "shen",
+      "nameKey": "char.shen.name",
+      "briefKey": "char.shen.brief"
+    },
+    {
+      "id": "bai",
+      "nameKey": "char.bai.name",
+      "briefKey": "char.bai.brief"
+    },
+    {
+      "id": "sun",
+      "nameKey": "char.sun.name",
+      "briefKey": "char.sun.brief"
+    }
+  ],
+  "acts": [
+    {
+      "id": "act1",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act1.open",
+      "closingNarrationKey": "nar.act1.close",
+      "scriptKeys": {
+        "shen": "script.act1.shen",
+        "bai": "script.act1.bai",
+        "sun": "script.act1.sun"
+      },
+      "locations": [
+        "loc.1",
+        "loc.2",
+        "loc.3"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "all_read"
+        ],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act1.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act2",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act2.open",
+      "closingNarrationKey": "nar.act2.close",
+      "scriptKeys": {
+        "shen": "script.act2.shen",
+        "bai": "script.act2.bai",
+        "sun": "script.act2.sun"
+      },
+      "locations": [
+        "loc.1",
+        "loc.2",
+        "loc.4"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act2.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act3",
+      "durationMin": 25,
+      "openingNarrationKey": "nar.act3.open",
+      "closingNarrationKey": "nar.act3.close",
+      "scriptKeys": {
+        "shen": "script.act3.shen",
+        "bai": "script.act3.bai",
+        "sun": "script.act3.sun"
+      },
+      "locations": [],
+      "searchQuota": {
+        "perSeat": 0
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "vote_done"
+        ],
+        "timeoutMin": 30
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 15,
+          "narrationKey": "nar.act3.hint1"
+        }
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "t1_body",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.t1_body",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t1_candlestick",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.t1_candlestick",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t1_ash",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.t1_ash",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t1_seats",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.t1_seats",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t1_door",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.t1_door",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t1_snow",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.t1_snow",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t2_base",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.t2_base",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t2_cloth",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.t2_cloth",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t2_debt",
+      "act": "act2",
+      "location": "loc.2",
+      "contentKey": "clue.t2_debt",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t2_talk",
+      "act": "act2",
+      "location": "loc.2",
+      "contentKey": "clue.t2_talk",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t2_salt",
+      "act": "act2",
+      "location": "loc.4",
+      "contentKey": "clue.t2_salt",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "t2_medicine",
+      "act": "act2",
+      "location": "loc.4",
+      "contentKey": "clue.t2_medicine",
+      "visibility": {
+        "type": "public"
+      }
+    }
+  ],
+  "votes": [
+    {
+      "id": "vote.final",
+      "act": "act3",
+      "mode": "single_public",
+      "promptKey": "vote.final.prompt",
+      "options": [
+        {
+          "id": "shen",
+          "labelKey": "vote.final.shen"
+        },
+        {
+          "id": "bai",
+          "labelKey": "vote.final.bai"
+        },
+        {
+          "id": "sun",
+          "labelKey": "vote.final.sun"
+        }
+      ],
+      "resultBranches": [
+        {
+          "match": "unanimous_shen",
+          "narrationKey": "end.allright"
+        },
+        {
+          "match": "majority_shen",
+          "narrationKey": "end.maj.right"
+        },
+        {
+          "match": "majority_bai",
+          "narrationKey": "end.maj.bai"
+        },
+        {
+          "match": "majority_sun",
+          "narrationKey": "end.maj.sun"
+        },
+        {
+          "match": "split",
+          "narrationKey": "end.split"
+        }
+      ]
+    }
+  ],
+  "mechanics": [],
+  "debrief": {
+    "segments": [
+      {
+        "id": "d1",
+        "contentKey": "debrief.1",
+        "unlock": "manual"
+      },
+      {
+        "id": "d2",
+        "contentKey": "debrief.2",
+        "unlock": "manual"
+      },
+      {
+        "id": "d3",
+        "contentKey": "debrief.3",
+        "unlock": "manual"
+      },
+      {
+        "id": "d4",
+        "contentKey": "debrief.4",
+        "unlock": "manual"
+      },
+      {
+        "id": "d5",
+        "contentKey": "debrief.5",
+        "unlock": "manual"
+      },
+      {
+        "id": "d6",
+        "contentKey": "debrief.6",
+        "unlock": "manual"
+      }
+    ]
+  }
+}

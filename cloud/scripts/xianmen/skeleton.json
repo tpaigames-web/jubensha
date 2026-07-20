@@ -1,0 +1,419 @@
+{
+  "scriptId": "xianmen",
+  "schemaVersion": 1,
+  "meta": {
+    "titleKey": "meta.title",
+    "players": 5,
+    "durationMin": 65,
+    "type": "whodunit"
+  },
+  "characters": [
+    {
+      "id": "liwufeng",
+      "nameKey": "char.liwufeng.name",
+      "briefKey": "char.liwufeng.brief"
+    },
+    {
+      "id": "sutangtang",
+      "nameKey": "char.sutangtang.name",
+      "briefKey": "char.sutangtang.brief"
+    },
+    {
+      "id": "wangergou",
+      "nameKey": "char.wangergou.name",
+      "briefKey": "char.wangergou.brief"
+    },
+    {
+      "id": "hubanxian",
+      "nameKey": "char.hubanxian.name",
+      "briefKey": "char.hubanxian.brief"
+    },
+    {
+      "id": "moxiaoyan",
+      "nameKey": "char.moxiaoyan.name",
+      "briefKey": "char.moxiaoyan.brief"
+    }
+  ],
+  "acts": [
+    {
+      "id": "act1",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act1.open",
+      "closingNarrationKey": "nar.act1.close",
+      "scriptKeys": {
+        "liwufeng": "script.act1.liwufeng",
+        "sutangtang": "script.act1.sutangtang",
+        "wangergou": "script.act1.wangergou",
+        "hubanxian": "script.act1.hubanxian",
+        "moxiaoyan": "script.act1.moxiaoyan"
+      },
+      "locations": [
+        "loc.1",
+        "loc.2",
+        "loc.3",
+        "loc.4",
+        "loc.5"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "all_read"
+        ],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act1.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act2",
+      "durationMin": 20,
+      "openingNarrationKey": "nar.act2.open",
+      "closingNarrationKey": "nar.act2.close",
+      "scriptKeys": {
+        "liwufeng": "script.act2.liwufeng",
+        "sutangtang": "script.act2.sutangtang",
+        "wangergou": "script.act2.wangergou",
+        "hubanxian": "script.act2.hubanxian",
+        "moxiaoyan": "script.act2.moxiaoyan"
+      },
+      "locations": [
+        "loc.1",
+        "loc.2",
+        "loc.3",
+        "loc.4",
+        "loc.6"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [],
+        "timeoutMin": 25
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 12,
+          "narrationKey": "nar.act2.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act3",
+      "durationMin": 25,
+      "openingNarrationKey": "nar.act3.open",
+      "closingNarrationKey": "nar.act3.close",
+      "scriptKeys": {
+        "liwufeng": "script.act3.liwufeng",
+        "sutangtang": "script.act3.sutangtang",
+        "wangergou": "script.act3.wangergou",
+        "hubanxian": "script.act3.hubanxian",
+        "moxiaoyan": "script.act3.moxiaoyan"
+      },
+      "locations": [],
+      "searchQuota": {
+        "perSeat": 0
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "vote_done"
+        ],
+        "timeoutMin": 30
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 15,
+          "narrationKey": "nar.act3.hint1"
+        }
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "x1_bottle",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.x1_bottle",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x1_window",
+      "act": "act1",
+      "location": "loc.1",
+      "contentKey": "clue.x1_window",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x1_array",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.x1_array",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x1_dust",
+      "act": "act1",
+      "location": "loc.2",
+      "contentKey": "clue.x1_dust",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x1_kitchen",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.x1_kitchen",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x1_dogfood",
+      "act": "act1",
+      "location": "loc.3",
+      "contentKey": "clue.x1_dogfood",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x1_library",
+      "act": "act1",
+      "location": "loc.4",
+      "contentKey": "clue.x1_library",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x1_novel",
+      "act": "act1",
+      "location": "loc.4",
+      "contentKey": "clue.x1_novel",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x1_sword",
+      "act": "act1",
+      "location": "loc.5",
+      "contentKey": "clue.x1_sword",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x1_pillbox",
+      "act": "act1",
+      "location": "loc.5",
+      "contentKey": "clue.x1_pillbox",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_smell",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.x2_smell",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_note",
+      "act": "act2",
+      "location": "loc.1",
+      "contentKey": "clue.x2_note",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_backdoor",
+      "act": "act2",
+      "location": "loc.2",
+      "contentKey": "clue.x2_backdoor",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_time",
+      "act": "act2",
+      "location": "loc.2",
+      "contentKey": "clue.x2_time",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_cellar",
+      "act": "act2",
+      "location": "loc.3",
+      "contentKey": "clue.x2_cellar",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_witness",
+      "act": "act2",
+      "location": "loc.3",
+      "contentKey": "clue.x2_witness",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_notebook",
+      "act": "act2",
+      "location": "loc.4",
+      "contentKey": "clue.x2_notebook",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_draft",
+      "act": "act2",
+      "location": "loc.4",
+      "contentKey": "clue.x2_draft",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_room",
+      "act": "act2",
+      "location": "loc.6",
+      "contentKey": "clue.x2_room",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "x2_glow",
+      "act": "act2",
+      "location": "loc.6",
+      "contentKey": "clue.x2_glow",
+      "visibility": {
+        "type": "public"
+      }
+    }
+  ],
+  "votes": [
+    {
+      "id": "vote.final",
+      "act": "act3",
+      "mode": "single_public",
+      "promptKey": "vote.final.prompt",
+      "options": [
+        {
+          "id": "liwufeng",
+          "labelKey": "vote.final.liwufeng"
+        },
+        {
+          "id": "sutangtang",
+          "labelKey": "vote.final.sutangtang"
+        },
+        {
+          "id": "wangergou",
+          "labelKey": "vote.final.wangergou"
+        },
+        {
+          "id": "hubanxian",
+          "labelKey": "vote.final.hubanxian"
+        },
+        {
+          "id": "moxiaoyan",
+          "labelKey": "vote.final.moxiaoyan"
+        }
+      ],
+      "resultBranches": [
+        {
+          "match": "unanimous_sutangtang",
+          "narrationKey": "end.allright"
+        },
+        {
+          "match": "majority_liwufeng",
+          "narrationKey": "end.maj.liwufeng"
+        },
+        {
+          "match": "majority_sutangtang",
+          "narrationKey": "end.maj.right"
+        },
+        {
+          "match": "majority_wangergou",
+          "narrationKey": "end.maj.wangergou"
+        },
+        {
+          "match": "majority_hubanxian",
+          "narrationKey": "end.maj.hubanxian"
+        },
+        {
+          "match": "majority_moxiaoyan",
+          "narrationKey": "end.maj.moxiaoyan"
+        },
+        {
+          "match": "split",
+          "narrationKey": "end.split"
+        }
+      ]
+    }
+  ],
+  "mechanics": [],
+  "debrief": {
+    "segments": [
+      {
+        "id": "d1",
+        "contentKey": "debrief.1",
+        "unlock": "manual"
+      },
+      {
+        "id": "d2",
+        "contentKey": "debrief.2",
+        "unlock": "manual"
+      },
+      {
+        "id": "d3",
+        "contentKey": "debrief.3",
+        "unlock": "manual"
+      },
+      {
+        "id": "d4",
+        "contentKey": "debrief.4",
+        "unlock": "manual"
+      },
+      {
+        "id": "d5",
+        "contentKey": "debrief.5",
+        "unlock": "manual"
+      },
+      {
+        "id": "d6",
+        "contentKey": "debrief.6",
+        "unlock": "manual"
+      }
+    ]
+  }
+}
