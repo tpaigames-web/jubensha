@@ -1,8 +1,8 @@
 /**
- * 生成剧本《四十年》（shop40）的骨架与文案包。
+ * 生成剧本《四十年》（oldshop）的骨架与文案包。
  *
  * 4人 · 情感还原本 · 约3小时 · 无凶手，还原一段往事
- * 用法: node tools/build-shop40.mjs
+ * 用法: node tools/build-oldshop.mjs
  *
  * 【给开发者】正文集中在本文件，生成后即为 content.pack。
  * 玩家不应阅读本文件。
@@ -15,7 +15,7 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const C = {};
 const put = (k, v) => { C[k] = String(v).trim(); return k; };
 
-const ID = "shop40";
+const ID = "oldshop";
 
 // ═══════════════ 元信息 ═══════════════
 put("meta.title", "四十年");

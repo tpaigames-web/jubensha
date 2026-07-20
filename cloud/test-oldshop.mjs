@@ -1,6 +1,6 @@
 /**
  * 《四十年》整局验收：用真实剧本包跑通一整局，并对真实正文做防剧透全文搜索。
- * 用法：node test-shop40.mjs [baseUrl]
+ * 用法：node test-oldshop.mjs [baseUrl]
  *
  * 【防剧透】本文件只用「关键词是否出现」来断言，**不打印任何剧本正文**。
  * 断言里出现的词是刻意挑的判别词，不构成剧透。
@@ -62,21 +62,21 @@ async function searchAll(P) {
   }
 }
 
-const ROOM = await findFreeRoom(WSBASE, "shop40");
-console.log("测试房号:", ROOM, "| 目标:", HTTP, "| 剧本: shop40《四十年》\n");
+const ROOM = await findFreeRoom(WSBASE, "oldshop");
+console.log("测试房号:", ROOM, "| 目标:", HTTP, "| 剧本: oldshop《四十年》\n");
 
 // ---------- 入场 ----------
 console.log("【流程】四人入座 → 选角 → 阅读");
 const P = [];
 const names = ["强", "华", "伟", "娣"];
 for (let i = 0; i < 4; i++) {
-  const c = await conn(ROOM, "shop40");
+  const c = await conn(ROOM, "oldshop");
   await wait(150);
   c.send({ type: "seat.claim", displayName: names[i], pin: String(1111 * (i + 1)).slice(0, 4) });
   await wait(250);
   P.push(c);
 }
-ok(st(P[0])?.script?.scriptId === "shop40", "房间用的是 shop40");
+ok(st(P[0])?.script?.scriptId === "oldshop", "房间用的是 oldshop");
 ok(st(P[0])?.room?.seatCount === 4, "席位数按 meta.players = 4");
 ok(st(P[0])?.script?.characters?.length === 4, "四个角色可选");
 

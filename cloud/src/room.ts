@@ -38,7 +38,17 @@ export class RoomDO implements DurableObject {
 
   private async getRoom(roomId: string, scriptId = "placeholder"): Promise<RoomState> {
     const r = await this.ctx.storage.get<RoomState>(K_ROOM);
-    if (r) return r;
+    if (r) {
+      // 剧本被改名或下架后，老房间会指向一个不存在的 id。
+      // 不接住的话 getSkeleton 抛错 → DO 返回 500 → WebSocket 握手直接失败，
+      // 玩家只会看到「连接失败」，连房间坏在哪都不知道。
+      if (!hasSkeleton(r.scriptId)) {
+        r.scriptId = "placeholder";
+        r.phase = "ended";                 // 老局已经没法继续了，让它体面地结束
+        await this.ctx.storage.put(K_ROOM, r);
+      }
+      return r;
+    }
     const sk = getSkeleton(hasSkeleton(scriptId) ? scriptId : "placeholder");
     const fresh: RoomState = {
       roomId,
