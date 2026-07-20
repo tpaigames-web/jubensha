@@ -125,6 +125,8 @@ export interface SnapshotFull {
     searchQuota: number;
     searchUsed: number;
     myScriptKeys: string[];
+    /** 当前阶段该放的背景音乐（public/audio/ 下的相对路径）；无则为 null */
+    bgm: string | null;
   };
   clues: { id: string; contentKey: string; location: string; private: boolean }[];
   vote: {

@@ -8,7 +8,7 @@
 
 export { RoomDO } from "./room";
 
-import { listScripts } from "./skeleton";
+import { listScripts, HIDDEN_SCRIPTS } from "./skeleton";
 import { getContent } from "./content";
 
 export interface Env {
@@ -42,7 +42,7 @@ export default {
     // 可选剧本列表：只回公开元信息（标题/人数/时长），不含任何剧情
     if (url.pathname === "/api/scripts") {
       const scripts = listScripts()
-        .filter((s) => s.scriptId !== "fasttest") // 计时探针本不对玩家展示
+        .filter((s) => !HIDDEN_SCRIPTS.has(s.scriptId)) // 测试/探针本不对玩家展示
         .map((s) => ({
           scriptId: s.scriptId,
           players: s.players,

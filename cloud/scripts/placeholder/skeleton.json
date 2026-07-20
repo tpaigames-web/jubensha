@@ -44,7 +44,7 @@
         "P1": "script.act2.P1", "P2": "script.act2.P2",
         "P3": "script.act2.P3", "P4": "script.act2.P4"
       },
-      "locations": ["loc.counter", "loc.stove", "loc.altar", "loc.cellar"],
+      "locations": ["loc.counter", "loc.stove", "loc.cellar"],
       "searchQuota": { "perSeat": 2 },
       "advance": { "type": "all_ready_or_timeout", "requires": [], "timeoutMin": 12 },
       "mechanics": [],

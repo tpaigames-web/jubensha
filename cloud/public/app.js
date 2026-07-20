@@ -360,6 +360,7 @@ function renderGame() {
   const n = chatUnreadTotal();
   if (n > 0) { $("n-chat").textContent = n > 99 ? "99+" : n; $("n-chat").style.display = "inline-block"; }
   else $("n-chat").style.display = "none";
+  applyBgm(st.script.bgm || null);   // 幕切换时自动换曲；剧本没配就静默
   tickTimer();
 }
 
@@ -851,9 +852,49 @@ $("btn-font").onclick = () => {
 $("btn-sound").onclick = () => {
   S.sound = !S.sound;
   $("btn-sound").textContent = S.sound ? "🔊" : "🔇";
-  if (S.sound) unlockAudio();
-  toast(S.sound ? "念白已开启" : "已静音", true);
+  try { localStorage.setItem("jbs2_sound", S.sound ? "1" : "0"); } catch {}
+  if (S.sound) { unlockAudio(); applyBgm(S.st?.script?.bgm || null); }
+  else { stopSpeak(); stopBgm(); }
+  toast(S.sound ? "声音已开启（念白+背景音乐）" : "已静音", true);
 };
+
+// ---- 背景音乐：剧本声明了才放，文件缺失静默跳过 ----
+const BGM = { el: null, cur: null, fadeTimer: null };
+function applyBgm(rel) {
+  if (!S.sound) { stopBgm(); return; }
+  if (!rel) { stopBgm(); return; }
+  const url = "/audio/" + rel;
+  if (BGM.cur === url && BGM.el && !BGM.el.paused) return;
+  if (!BGM.el) {
+    BGM.el = new Audio();
+    BGM.el.loop = true;
+    BGM.el.volume = 0;
+    // 文件不存在就当没这回事，绝不打扰玩家
+    BGM.el.addEventListener("error", () => { BGM.cur = null; });
+  }
+  BGM.cur = url;
+  BGM.el.src = url;
+  BGM.el.volume = 0;
+  BGM.el.play().then(() => fadeTo(0.35)).catch(() => { /* 未解锁或文件缺失 */ });
+}
+function fadeTo(target) {
+  clearInterval(BGM.fadeTimer);
+  BGM.fadeTimer = setInterval(() => {
+    if (!BGM.el) return clearInterval(BGM.fadeTimer);
+    const d = target - BGM.el.volume;
+    if (Math.abs(d) < 0.02) { BGM.el.volume = target; clearInterval(BGM.fadeTimer); return; }
+    BGM.el.volume = Math.max(0, Math.min(1, BGM.el.volume + d * 0.15));
+  }, 60);
+}
+function stopBgm() {
+  clearInterval(BGM.fadeTimer);
+  if (BGM.el) { try { BGM.el.pause(); } catch {} }
+  BGM.cur = null;
+}
+/** 念白期间把 BGM 压低，说完恢复 */
+function duckBgm(down) {
+  if (BGM.el && !BGM.el.paused) fadeTo(down ? 0.12 : 0.35);
+}
 
 // 念白：先用浏览器内建 TTS 顶替，后续可替换为录音
 function speak(text) {
@@ -862,11 +903,15 @@ function speak(text) {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(String(text).replace(/[【】]/g, " "));
     u.lang = "zh-CN"; u.rate = 1.02;
+    duckBgm(true);                        // 念白时压低背景音乐
+    u.onend = () => duckBgm(false);
+    u.onerror = () => duckBgm(false);
     speechSynthesis.speak(u);
-  } catch {}
+  } catch { duckBgm(false); }
 }
 function stopSpeak() {
   try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch {}
+  duckBgm(false);
 }
 // 移动端必须在用户手势里解锁音频
 function unlockAudio() {
@@ -903,6 +948,8 @@ document.addEventListener("visibilitychange", () => {
   try {
     const f = localStorage.getItem("jbs2_fs");
     if (f !== null) { S.fontIdx = Number(f); document.documentElement.style.setProperty("--fs", FONTS[S.fontIdx] + "px"); }
+    const snd = localStorage.getItem("jbs2_sound");
+    if (snd !== null) { S.sound = snd === "1"; $("btn-sound").textContent = S.sound ? "🔊" : "🔇"; }
   } catch {}
 
   // 记住身份，免得每局重输

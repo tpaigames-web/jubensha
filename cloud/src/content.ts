@@ -11,8 +11,7 @@
  * resolveMany 只服务于「已通过可见性裁决的 key 列表」。
  */
 
-import packText from "../scripts/placeholder/content.pack";
-import radioPack from "../scripts/radio/content.pack";
+import { PACK_TEXT } from "./registry.gen";
 
 export interface ContentSource {
   resolve(key: string): string | null;
@@ -41,14 +40,14 @@ class JsonContentSource implements ContentSource {
   }
 }
 
-const placeholderPack = new JsonContentSource(packText as unknown as string);
-
-const sources: Record<string, ContentSource> = {
-  placeholder: placeholderPack,
-  /** 计时探针剧本复用同一套占位 key，无需单独文案包 */
-  fasttest: placeholderPack,
-  radio: new JsonContentSource(radioPack as unknown as string),
-};
+/** 由 tools/register.mjs 生成：scriptId → 文案包原文（多剧本可共用一个包） */
+const sources: Record<string, ContentSource> = {};
+const cacheByText = new Map<string, ContentSource>();
+for (const [id, text] of Object.entries(PACK_TEXT)) {
+  let src = cacheByText.get(text);
+  if (!src) { src = new JsonContentSource(text); cacheByText.set(text, src); }
+  sources[id] = src;
+}
 
 export function getContent(scriptId: string): ContentSource {
   const s = sources[scriptId];

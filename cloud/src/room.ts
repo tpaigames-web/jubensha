@@ -205,6 +205,7 @@ export class RoomDO implements DurableObject {
         locationsAvailable: availableLocations(sk, vctx),
         searchQuota: act ? act.searchQuota.perSeat : 0,
         searchUsed: me.searchUsed?.[room.actIndex] ?? 0,
+        bgm: this.bgmFor(room, sk, act),
         /** 仅已开放幕的自己剧本 key */
         myScriptKeys: me.characterId
           ? sk.acts
@@ -259,6 +260,15 @@ export class RoomDO implements DurableObject {
       ballots: v.mode === "single_public" ? ballots : undefined,
       tally,
     };
+  }
+
+  /** 当前阶段该放的 BGM；剧本没声明就返回 null（前端静默） */
+  private bgmFor(room: RoomState, sk: Skeleton, act: { id: string } | null): string | null {
+    const a = sk.audio;
+    if (!a) return null;
+    if (room.phase === "debrief" || room.phase === "ended") return a.bgmDebrief ?? null;
+    if (room.phase === "playing" && act) return a.bgmByAct?.[act.id] ?? a.bgmLobby ?? null;
+    return a.bgmLobby ?? null;
   }
 
   /** 当前幕的机制（按席位投影） */

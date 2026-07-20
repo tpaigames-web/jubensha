@@ -2,9 +2,7 @@
  * 剧本骨架类型与加载。骨架里**没有任何正文**，只有结构与 key。
  */
 
-import skeletonJson from "../scripts/placeholder/skeleton.json";
-import fastTestJson from "../scripts/fasttest/skeleton.json";
-import radioJson from "../scripts/radio/skeleton.json";
+import { SKELETON_JSON, HIDDEN_SCRIPTS } from "./registry.gen";
 
 export interface Visibility {
   type: "public" | "private";
@@ -46,10 +44,24 @@ export interface VoteDef {
   resultBranches: { match: string; narrationKey: string }[];
 }
 
+/**
+ * 可选音频声明。文件放 public/audio/ 下，这里写相对该目录的路径。
+ * 没有声明或文件不存在时，前端静默跳过，不影响游戏。
+ */
+export interface AudioDecl {
+  /** 幕 id → 背景音乐文件，如 { "act1": "radio/act1.mp3" } */
+  bgmByAct?: Record<string, string>;
+  /** 大厅/阅读阶段的背景音乐 */
+  bgmLobby?: string;
+  /** 复盘阶段的背景音乐 */
+  bgmDebrief?: string;
+}
+
 export interface Skeleton {
   scriptId: string;
   schemaVersion: number;
   meta: { titleKey: string; players: number; durationMin: number; type: string };
+  audio?: AudioDecl;
   characters: { id: string; nameKey: string; briefKey: string }[];
   acts: ActDef[];
   clues: ClueDef[];
@@ -58,14 +70,11 @@ export interface Skeleton {
   debrief: { segments: { id: string; contentKey: string; unlock: string }[] };
 }
 
-const registry: Record<string, Skeleton> = {
-  placeholder: skeletonJson as unknown as Skeleton,
-  /** 仅用于验证 DO Alarm 计时链路：幕长与提示时间被压缩到秒级 */
-  fasttest: fastTestJson as unknown as Skeleton,
-  radio: radioJson as unknown as Skeleton,
-};
+/** 注册表由 tools/register.mjs 扫描 scripts/ 自动生成 */
+const registry: Record<string, Skeleton> = SKELETON_JSON as Record<string, Skeleton>;
 
 export const hasSkeleton = (scriptId: string) => scriptId in registry;
+export { HIDDEN_SCRIPTS };
 
 export function getSkeleton(scriptId: string): Skeleton {
   const s = registry[scriptId];
