@@ -13,6 +13,7 @@ const scriptsDir = resolve(__dir, "..", "scripts");
 
 let problems = 0;
 const bad = (id, msg) => { console.log(`  ✗ [${id}] ${msg}`); problems++; };
+const warn = (id, msg) => console.log(`  ⚠ [${id}] ${msg}`);   // 能跑，但体验会打折
 const good = (msg) => console.log(`  ✓ ${msg}`);
 
 function validate(id) {
@@ -91,6 +92,18 @@ function validate(id) {
     if (!v.options?.length) bad(id, `投票 ${v.id} 没有选项`);
     if (!v.resultBranches?.some((b) => b.match === "split"))
       bad(id, `投票 ${v.id} 缺少兜底的 split 分支（票型不匹配时会没有结算播报）`);
+
+    // 分支名拼错不会报错，只会静静地退回 split——这类问题只有玩到最后才发现
+    const optIds = new Set((v.options || []).map((o) => o.id));
+    for (const b of v.resultBranches || []) {
+      if (b.match === "split") continue;
+      const m = /^(unanimous|majority)_(.+)$/.exec(b.match || "");
+      if (!m) bad(id, `投票 ${v.id} 的分支名 ${b.match} 无法识别（应为 unanimous_<选项> / majority_<选项> / split）`);
+      else if (!optIds.has(m[2])) bad(id, `投票 ${v.id} 的分支 ${b.match} 指向不存在的选项 ${m[2]}`);
+    }
+    // 选项多于两个时，2:1 / 3:2 这类结果很常见，只有 split 兜底会让大多数局撞到同一个结尾
+    if ((v.options || []).length > 2 && !v.resultBranches?.some((b) => b.match.startsWith("majority_")))
+      warn(id, `投票 ${v.id} 有 ${v.options.length} 个选项却没写 majority_* 分支，多数决的局会全部落到 split`);
   }
 
   // 机制声明

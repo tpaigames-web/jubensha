@@ -355,6 +355,26 @@
           "narrationKey": "end.allright"
         },
         {
+          "match": "majority_jiangsheng",
+          "narrationKey": "end.maj.right"
+        },
+        {
+          "match": "majority_suwan",
+          "narrationKey": "end.maj.suwan"
+        },
+        {
+          "match": "majority_qianzong",
+          "narrationKey": "end.maj.qianzong"
+        },
+        {
+          "match": "majority_xiaolu",
+          "narrationKey": "end.maj.xiaolu"
+        },
+        {
+          "match": "majority_baishifu",
+          "narrationKey": "end.maj.baishifu"
+        },
+        {
           "match": "split",
           "narrationKey": "end.split"
         }

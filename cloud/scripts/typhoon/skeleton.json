@@ -1,0 +1,434 @@
+{
+  "scriptId": "typhoon",
+  "schemaVersion": 1,
+  "meta": {
+    "titleKey": "meta.title",
+    "players": 3,
+    "durationMin": 110,
+    "type": "linear_pve_reconstruction"
+  },
+  "characters": [
+    {
+      "id": "P1",
+      "nameKey": "char.P1.name",
+      "briefKey": "char.P1.brief"
+    },
+    {
+      "id": "P2",
+      "nameKey": "char.P2.name",
+      "briefKey": "char.P2.brief"
+    },
+    {
+      "id": "P3",
+      "nameKey": "char.P3.name",
+      "briefKey": "char.P3.brief"
+    }
+  ],
+  "acts": [
+    {
+      "id": "act1",
+      "durationMin": 40,
+      "openingNarrationKey": "nar.act1.open",
+      "closingNarrationKey": "nar.act1.close",
+      "scriptKeys": {
+        "P1": "script.act1.P1",
+        "P2": "script.act1.P2",
+        "P3": "script.act1.P3"
+      },
+      "locations": [
+        "loc.counter",
+        "loc.shutter",
+        "loc.fridge"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "all_read"
+        ],
+        "timeoutMin": 45
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 22,
+          "narrationKey": "nar.act1.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act2",
+      "durationMin": 40,
+      "openingNarrationKey": "nar.act2.open",
+      "closingNarrationKey": "nar.act2.close",
+      "scriptKeys": {
+        "P1": "script.act2.P1",
+        "P2": "script.act2.P2",
+        "P3": "script.act2.P3"
+      },
+      "locations": [
+        "loc.counter",
+        "loc.shutter",
+        "loc.store",
+        "loc.cctv"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [],
+        "timeoutMin": 45
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 22,
+          "narrationKey": "nar.act2.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act3",
+      "durationMin": 30,
+      "openingNarrationKey": "nar.act3.open",
+      "closingNarrationKey": "nar.act3.close",
+      "scriptKeys": {
+        "P1": "script.act3.P1",
+        "P2": "script.act3.P2",
+        "P3": "script.act3.P3"
+      },
+      "locations": [
+        "loc.cctv",
+        "loc.store"
+      ],
+      "searchQuota": {
+        "perSeat": 1
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "vote_done",
+          "mechanic_done"
+        ],
+        "timeoutMin": 35
+      },
+      "mechanics": [
+        "timeline_puzzle"
+      ],
+      "hints": [
+        {
+          "afterMin": 18,
+          "narrationKey": "nar.act3.hint1"
+        }
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "c.a1.01",
+      "act": "act1",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a1.01",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.02",
+      "act": "act1",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a1.02",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.03",
+      "act": "act1",
+      "location": "loc.shutter",
+      "contentKey": "clue.c.a1.03",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.04",
+      "act": "act1",
+      "location": "loc.shutter",
+      "contentKey": "clue.c.a1.04",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.05",
+      "act": "act1",
+      "location": "loc.fridge",
+      "contentKey": "clue.c.a1.05",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.06",
+      "act": "act1",
+      "location": "loc.fridge",
+      "contentKey": "clue.c.a1.06",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.07",
+      "act": "act1",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a1.07",
+      "visibility": {
+        "type": "private",
+        "characters": [
+          "P2"
+        ]
+      }
+    },
+    {
+      "id": "c.a2.01",
+      "act": "act2",
+      "location": "loc.store",
+      "contentKey": "clue.c.a2.01",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.02",
+      "act": "act2",
+      "location": "loc.store",
+      "contentKey": "clue.c.a2.02",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.03",
+      "act": "act2",
+      "location": "loc.cctv",
+      "contentKey": "clue.c.a2.03",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.04",
+      "act": "act2",
+      "location": "loc.cctv",
+      "contentKey": "clue.c.a2.04",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.05",
+      "act": "act2",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a2.05",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.06",
+      "act": "act2",
+      "location": "loc.shutter",
+      "contentKey": "clue.c.a2.06",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.07",
+      "act": "act2",
+      "location": "loc.store",
+      "contentKey": "clue.c.a2.07",
+      "visibility": {
+        "type": "private",
+        "characters": [
+          "P1"
+        ]
+      }
+    },
+    {
+      "id": "c.a3.01",
+      "act": "act3",
+      "location": "loc.cctv",
+      "contentKey": "clue.c.a3.01",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a3.02",
+      "act": "act3",
+      "location": "loc.cctv",
+      "contentKey": "clue.c.a3.02",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a3.03",
+      "act": "act3",
+      "location": "loc.store",
+      "contentKey": "clue.c.a3.03",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a3.04",
+      "act": "act3",
+      "location": "loc.store",
+      "contentKey": "clue.c.a3.04",
+      "visibility": {
+        "type": "public"
+      }
+    }
+  ],
+  "votes": [
+    {
+      "id": "vote.final",
+      "act": "act3",
+      "mode": "single_public",
+      "promptKey": "vote.final.prompt",
+      "options": [
+        {
+          "id": "call",
+          "labelKey": "vote.final.call"
+        },
+        {
+          "id": "face",
+          "labelKey": "vote.final.face"
+        },
+        {
+          "id": "keep",
+          "labelKey": "vote.final.keep"
+        }
+      ],
+      "resultBranches": [
+        {
+          "match": "unanimous_call",
+          "narrationKey": "nar.end.call"
+        },
+        {
+          "match": "unanimous_face",
+          "narrationKey": "nar.end.face"
+        },
+        {
+          "match": "unanimous_keep",
+          "narrationKey": "nar.end.keep"
+        },
+        {
+          "match": "majority_call",
+          "narrationKey": "nar.end.mcall"
+        },
+        {
+          "match": "majority_face",
+          "narrationKey": "nar.end.mface"
+        },
+        {
+          "match": "majority_keep",
+          "narrationKey": "nar.end.mkeep"
+        },
+        {
+          "match": "split",
+          "narrationKey": "nar.end.split"
+        }
+      ]
+    }
+  ],
+  "mechanics": [
+    {
+      "id": "timeline_puzzle",
+      "act": "act3",
+      "params": {
+        "slots": 6,
+        "slotLabels": [
+          "23:12",
+          "23:20",
+          "23:28",
+          "23:31",
+          "23:44",
+          "23:50"
+        ],
+        "fragments": [
+          {
+            "character": "P3",
+            "slot": 0,
+            "label": "老板打电话来，说无论如何不许开闸——开了进水淹了货，你赔得起吗。我说：好。"
+          },
+          {
+            "character": "P1",
+            "slot": 1,
+            "label": "我在对面组屋楼下躲雨。水已经到膝盖，整条街的灯灭了两盏，看不清对面。"
+          },
+          {
+            "character": "P2",
+            "slot": 2,
+            "label": "姐姐打给我，说她被困在一间五金店门口，叫我别担心，她马上进去躲。"
+          },
+          {
+            "character": "P3",
+            "slot": 3,
+            "label": "有人在敲闸门。敲得很急，后来变成拍，拍得整块铁皮都在响。我站在里面，离门两步。我没动。"
+          },
+          {
+            "character": "P1",
+            "slot": 4,
+            "label": "我看见闸门底下伸出来一双手。我喊了一声，没人应。我打了999。"
+          },
+          {
+            "character": "P2",
+            "slot": 5,
+            "label": "电话断了。她最后一句话是——他们不开门。"
+          }
+        ]
+      }
+    }
+  ],
+  "debrief": {
+    "segments": [
+      {
+        "id": "d1",
+        "contentKey": "debrief.1",
+        "unlock": "manual"
+      },
+      {
+        "id": "d2",
+        "contentKey": "debrief.2",
+        "unlock": "manual"
+      },
+      {
+        "id": "d3",
+        "contentKey": "debrief.3",
+        "unlock": "manual"
+      },
+      {
+        "id": "d4",
+        "contentKey": "debrief.4",
+        "unlock": "manual"
+      },
+      {
+        "id": "d5",
+        "contentKey": "debrief.5",
+        "unlock": "manual"
+      },
+      {
+        "id": "d6",
+        "contentKey": "debrief.6",
+        "unlock": "manual"
+      }
+    ]
+  }
+}

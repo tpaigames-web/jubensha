@@ -7,6 +7,18 @@
 - 运行在 Cloudflare Workers + Durable Objects：一个房间 = 一个 DO 实例，状态强一致、进程回收不丢局
 - 电脑不用开机；购买的商业本因版权只留在本地 Python 服务器（`../server.py`），不上云
 
+## 现有剧本
+
+| id | 人数 | 时长 | 类型 |
+|---|---|---|---|
+| `typhoon` 台风夜 | 3 人 | ~110 分钟 | 悬疑还原 · 三人三对，每对都有第三人不知道的秘密 |
+| `shop40` 四十年 | 4 人 | ~160 分钟 | 情感还原 · 无凶手 |
+| `radio` 午夜电台 | 5 人 | ~65 分钟 | 指认凶手（由旧格式转换而来） |
+| `placeholder` / `fasttest` | — | — | 测试夹具，不对玩家展示 |
+
+`typhoon` 与 `shop40` 的正文分别在 `tools/build-typhoon.mjs` / `tools/build-shop40.mjs`，
+改剧情就改那两个文件再重新生成。**玩家不要读这两个文件。**
+
 ---
 
 ## 加一个新剧本（不用改任何源码）
@@ -37,11 +49,24 @@
 node tools/convert.mjs "C:\sohai\jubensha\scripts\xxx.json" <新剧本id>
 ```
 
+### 投票结算的分支
+
+`resultBranches` 的 `match` 只认三种写法，按优先级匹配：
+
+| 写法 | 命中条件 |
+|---|---|
+| `unanimous_<选项id>` | 全票投给同一个选项 |
+| `majority_<选项id>` | 严格多数（过半且无并列第一）——3 人的 2:1、5 人的 3:2 |
+| `split` | 其余情况，**必须写**，是兜底 |
+
+选项超过两个却不写 `majority_*`，几乎每一局都会落到同一个 `split` 结尾——校验器会警告。
+
 ### 校验器会查什么
 
 角色数与 `meta.players` 是否一致、每幕是否给齐所有角色的剧本 key、线索是否指向存在的幕、
-私有线索的角色是否存在、投票是否有兜底 `split` 分支、机制声明是否有对应参数、
-**文案包是否缺 key**、地点是否有线索（避免玩家点了搜不到东西）。
+私有线索的角色是否存在、投票分支名是否拼错或指向不存在的选项、是否有兜底 `split`、
+机制声明是否有对应参数、**文案包是否缺 key**、地点是否有线索（避免玩家点了搜不到东西）、
+线索数是否够全场搜。
 
 ---
 
@@ -83,6 +108,8 @@ node test-seat.mjs                     # 身份与恢复
 node test-engine.mjs                   # 可见性与运行时引擎
 node test-timer.mjs                    # DO Alarm 计时链路
 node test-chat.mjs                     # 阅读推进与聊天权限
+node test-shop40.mjs                   # 《四十年》整局 + 防剧透全文搜索
+node test-typhoon.mjs                  # 《台风夜》整局 + 多数决结算
 # 每条后面加 https://jubensha.tpaigames.workers.dev 即可打生产
 ```
 

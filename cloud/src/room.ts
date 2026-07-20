@@ -524,10 +524,21 @@ export class RoomDO implements DurableObject {
     const primary = choices.map((c) => (Array.isArray(c) ? c[0] : c));
     const uniq = [...new Set(primary)];
     let match = "split";
-    if (uniq.length === 1) match = "unanimous_" + uniq[0];
+    if (uniq.length === 1) {
+      match = "unanimous_" + uniq[0];
+    } else {
+      // 严格多数（过半，且没有并列第一）单独成一档：3 人的 2:1、5 人的 3:2
+      // 才是最常见的收场，全塞进 split 的话大多数局都拿到同一个兜底结尾。
+      const count = new Map<string, number>();
+      for (const p of primary) count.set(p, (count.get(p) ?? 0) + 1);
+      const rank = [...count.entries()].sort((a, b) => b[1] - a[1]);
+      const leadsAlone = rank.length < 2 || rank[0][1] > rank[1][1];
+      if (leadsAlone && rank[0][1] * 2 > primary.length) match = "majority_" + rank[0][0];
+    }
 
     const branch =
       v.resultBranches.find((b) => b.match === match) ??
+      // 剧本没写这一档就退回 split，老剧本不受影响
       v.resultBranches.find((b) => b.match === "split");
     if (branch) await this.narrate(room, branch.narrationKey, "ending");
   }

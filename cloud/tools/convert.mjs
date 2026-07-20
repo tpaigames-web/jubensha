@@ -163,6 +163,24 @@ const votes = [{
       narrationKey: put("end.allright",
         `全场一致\n\n所有人的手，都指向了同一个人。\n没有分歧，没有犹豫。\n\n这一次，你们没有被骗过去。`),
     },
+    // 多数决单独成档。人多、选项也多的本（5 人指认 5 个嫌疑人）几乎不可能全票一致，
+    // 只有 split 兜底的话，每一局都会撞到同一句「你们没能达成一致」，等于没有结局。
+    ...old.characters.map((c) =>
+      c.id === old.murderer
+        ? {
+            match: `majority_${c.id}`,
+            narrationKey: put("end.maj.right",
+              `多数指认 · ${c.name}\n\n不是全票，但大多数人的手指向了同一个方向。\n` +
+              `有人到最后一刻还在摇头。\n\n——你们指对了。`),
+          }
+        : {
+            match: `majority_${c.id}`,
+            narrationKey: put(`end.maj.${c.id}`,
+              `多数指认 · ${c.name}\n\n大多数人认定了${c.name}。\n` +
+              `${c.name}百口莫辩，因为你们手上的东西，看起来确实都指向他。\n\n` +
+              `——而真正的那个人，此刻正在心里松一口气。`),
+          }
+    ),
     {
       match: "split",
       narrationKey: put("end.split",
