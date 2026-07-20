@@ -45,21 +45,33 @@ node tools/convert.mjs "C:\sohai\jubensha\scripts\xxx.json" <新剧本id>
 
 ---
 
-## 加背景音乐（可选）
+## 背景音乐
 
-1. 音频文件放 `public/audio/` 下，例如 `public/audio/radio/act1.mp3`
-2. 在该剧本的 `skeleton.json` 里加一段：
+`public/audio/` 下已经有两套 60 秒无缝循环的氛围垫：
 
-   ```json
-   "audio": {
-     "bgmLobby": "radio/lobby.mp3",
-     "bgmByAct": { "act1": "radio/act1.mp3", "act2": "radio/act2.mp3" },
-     "bgmDebrief": "radio/debrief.mp3"
-   }
-   ```
+- `common/*` —— 通用悬疑垫，**任何剧本不声明 audio 时自动使用**（按幕序递进）
+- `shop40/*` —— 《四十年》专用（雨夜老店）
 
-幕切换时自动换曲并淡入淡出，主持人念白时自动压低音量。
-**没声明或文件不存在时静默运行，不会报错。**
+这些不是配乐，是低频持续音 + 雨声的「底噪」，用来垫住三小时的沉默、不抢台词。
+全部由 `tools/gen-audio.py` 用代码合成，无版权问题，随时可以换成真正的音乐：
+
+```bash
+python tools/gen-audio.py     # 需要 ffmpeg（libmp3lame）
+```
+
+想给某个剧本配专属音乐，把文件放 `public/audio/<剧本id>/`，再在 `skeleton.json` 里声明：
+
+```json
+"audio": {
+  "bgmLobby": "radio/lobby.mp3",
+  "bgmByAct": { "act1": "radio/act1.mp3", "act2": "radio/act2.mp3" },
+  "bgmDebrief": "radio/debrief.mp3"
+}
+```
+
+幕切换时交叉淡入淡出，主持人念白时自动压低。**文件不存在时静默跳过，不会报错。**
+循环走 Web Audio 而不是 `<audio loop>`——后者每转一圈会漏出 mp3 的编码填充，
+垫在持续低音上是很明显的一声断裂。
 
 念白目前用浏览器内建 TTS；换成录音文件的话在 `public/app.js` 的 `speak()` 里替换即可。
 

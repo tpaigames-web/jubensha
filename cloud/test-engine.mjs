@@ -88,6 +88,10 @@ const a1 = P[0].last("snapshot.full");
 ok(a1?.room?.phase === "playing" && a1?.room?.actIndex === 0, "全员读完 → 自动进入第一幕");
 ok(!!P[0].all("narration").find((n) => n.text.includes("第一幕-开场播报")), "第一幕开场播报已推送");
 ok(typeof a1?.room?.actEndsAt === "number" && a1.room.actEndsAt > Date.now(), "服务端下发幕截止时间 actEndsAt");
+// 必须等四端都收到「已进第一幕」的快照再比：只等 P[0] 的话，
+// 生产环境的网络抖动会让其余三端还停在 reading（actEndsAt 仍是 null），
+// 于是断言失败——那是测试自己的竞态，不是服务端不一致。
+await waitFor(() => P.every((c) => c.last("snapshot.full")?.room?.phase === "playing"));
 const ends = P.map((c) => c.last("snapshot.full").room.actEndsAt);
 ok(new Set(ends).size === 1, "四端 actEndsAt 完全一致（服务端时钟驱动）");
 

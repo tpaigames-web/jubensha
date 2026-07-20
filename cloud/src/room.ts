@@ -262,13 +262,27 @@ export class RoomDO implements DurableObject {
     };
   }
 
-  /** 当前阶段该放的 BGM；剧本没声明就返回 null（前端静默） */
+  /**
+   * 当前阶段该放的 BGM。剧本没声明就退到通用氛围垫 common/*，
+   * 让每个本都有底噪；文件真缺时前端 fetch 404 后静默跳过。
+   */
   private bgmFor(room: RoomState, sk: Skeleton, act: { id: string } | null): string | null {
     const a = sk.audio;
-    if (!a) return null;
-    if (room.phase === "debrief" || room.phase === "ended") return a.bgmDebrief ?? null;
-    if (room.phase === "playing" && act) return a.bgmByAct?.[act.id] ?? a.bgmLobby ?? null;
-    return a.bgmLobby ?? null;
+    if (room.phase === "debrief" || room.phase === "ended") {
+      return a?.bgmDebrief ?? "common/debrief.mp3";
+    }
+    if (room.phase === "playing" && act) {
+      return a?.bgmByAct?.[act.id] ?? a?.bgmLobby ?? this.commonActBgm(sk, act.id);
+    }
+    return a?.bgmLobby ?? "common/lobby.mp3";
+  }
+
+  /** 通用垫按幕序递进（越后面越紧），幕数多于三幕的一律用最紧的那条 */
+  private commonActBgm(sk: Skeleton, actId: string): string {
+    const i = sk.acts.findIndex((x) => x.id === actId);
+    const last = sk.acts.length - 1;
+    if (i <= 0) return "common/act1.mp3";
+    return i >= last ? "common/act3.mp3" : "common/act2.mp3";
   }
 
   /** 当前幕的机制（按席位投影） */

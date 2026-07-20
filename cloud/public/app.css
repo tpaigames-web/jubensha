@@ -100,15 +100,22 @@ input:focus { border-color:#d9b45b; }
 .timeline { display:flex; flex-direction:column; gap:10px; }
 .slot {
   min-height:56px; border:2px dashed #3a3d52; border-radius:12px;
-  display:flex; align-items:center; justify-content:center; color:#8b8898;
-  background:#171923; padding:8px; touch-action:none;
+  display:flex; align-items:center; gap:10px; color:#8b8898; line-height:1.55;
+  background:#171923; padding:10px 12px; touch-action:none;
 }
 .slot.filled { border-style:solid; border-color:#d9b45b; background:#26221580; color:#e8e6df; }
 .slot.hover { border-color:#5ecfda; background:#12262a; }
+/* 时间提示：空格也显示，玩家据此判断该放哪一段 */
+.slot-t {
+  flex:0 0 auto; align-self:stretch; display:flex; align-items:center;
+  min-width:58px; padding-right:10px; border-right:1px solid #3a3d52;
+  font-size:12px; font-weight:700; color:#d9b45b;
+}
 .frag {
   background:linear-gradient(135deg,#d9b45b,#c1922f); color:#1b1405; font-weight:700;
-  border-radius:10px; padding:12px 14px; min-height:48px; display:flex; align-items:center;
-  justify-content:center; cursor:grab; touch-action:none; user-select:none;
+  border-radius:10px; padding:12px 14px; min-height:48px; width:100%;
+  display:flex; align-items:center; line-height:1.55;
+  cursor:grab; touch-action:none; user-select:none;
 }
 .frag.dragging { opacity:.5; }
 #drag-ghost {

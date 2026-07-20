@@ -314,6 +314,7 @@ function render() {
   if (!st) return;
   if (st.room.phase === "lobby") { show("lobby"); renderLobby(); }
   else { show("game"); renderGame(); }
+  applyBgm(st.script.bgm || null);   // 等人的时候就该有底噪，不是开局才有
 }
 
 function renderLobby() {
@@ -360,7 +361,6 @@ function renderGame() {
   const n = chatUnreadTotal();
   if (n > 0) { $("n-chat").textContent = n > 99 ? "99+" : n; $("n-chat").style.display = "inline-block"; }
   else $("n-chat").style.display = "none";
-  applyBgm(st.script.bgm || null);   // 幕切换时自动换曲；剧本没配就静默
   tickTimer();
 }
 
@@ -524,15 +524,23 @@ function bindVote() {
 // --- 机制：时间线拖拽（Pointer Events，手机可用） ---
 function renderMechanic(m) {
   const s = m.state || {};
-  const slots = (s.slots || []).map((x, i) => `
-    <div class="slot ${x ? "filled" : ""}" data-slot="${i}">
-      ${x ? `${esc(x.label)}${x.byMe ? ' <span class="tag" style="margin-left:6px">我放的·点击取回</span>' : ""}` : `第 ${i + 1} 格（空）`}
-    </div>`).join("");
+  const labels = s.slotLabels || [];
+  const slots = (s.slots || []).map((x, i) => {
+    const tag = labels[i] ? `<span class="slot-t">${esc(labels[i])}</span>` : "";
+    const body = x
+      ? `${esc(x.label)}${x.byMe ? ' <span class="tag" style="margin-left:6px">我放的·点击取回</span>' : ""}`
+      : `<span class="hint">${labels[i] ? "还没人放" : `第 ${i + 1} 格（空）`}</span>`;
+    return `<div class="slot ${x ? "filled" : ""}" data-slot="${i}">${tag}${body}</div>`;
+  }).join("");
   const frags = (s.myFragments || []).map((f) => `<div class="frag" data-frag="${esc(f.fragId)}">${esc(f.label)}</div>`).join("");
   return `<div class="card" id="mech-box" data-mid="${esc(m.mechanicId)}">
     <h2>🧩 时间线拼合</h2>
     <p class="hint" style="margin-bottom:8px">
-      ${m.complete ? "✅ 已拼合完整" : `还剩 ${(s.emptySlots || []).length} 格 · 其他人手上还有 ${s.othersHolding ?? 0} 枚`}
+      ${!m.complete
+        ? `还剩 ${(s.emptySlots || []).length} 格 · 其他人手上还有 ${s.othersHolding ?? 0} 枚`
+        : s.ordered === false
+          ? "⚠️ 拼满了，但顺序还不对。点自己放的那一格可以取回重放。"
+          : s.ordered === true ? "✅ 顺序正确，这就是那几天的样子。" : "✅ 已拼合完整"}
     </p>
     <div class="timeline">${slots}</div>
     <div style="margin-top:12px">
@@ -859,41 +867,122 @@ $("btn-sound").onclick = () => {
 };
 
 // ---- 背景音乐：剧本声明了才放，文件缺失静默跳过 ----
-const BGM = { el: null, cur: null, fadeTimer: null };
+// 用 Web Audio 循环，不用 <audio loop>：mp3 首尾带编码填充，
+// <audio loop> 每转一圈会漏出几十毫秒空档，垫在持续低音上非常刺耳。
+const BGM = {
+  ctx: null, master: null, src: null, cur: null, cache: new Map(),
+  el: null, elTimer: null, VOL: 0.35, DUCK: 0.12,
+};
+
+/** 惰性建 AudioContext，并在每次用到时尝试恢复（移动端会自动挂起） */
+function audioCtx() {
+  if (!BGM.ctx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    try {
+      BGM.ctx = new Ctx();
+      BGM.master = BGM.ctx.createGain();
+      BGM.master.gain.value = 0;
+      BGM.master.connect(BGM.ctx.destination);
+    } catch { return null; }
+  }
+  if (BGM.ctx.state === "suspended") BGM.ctx.resume().catch(() => {});
+  return BGM.ctx;
+}
+
+function decodeAudio(ctx, ab) {
+  return new Promise((res, rej) => {
+    const p = ctx.decodeAudioData(ab, res, rej);   // 老 iOS 只有回调式
+    if (p && p.then) p.then(res, rej);
+  });
+}
+
+async function loadBuf(url) {
+  if (BGM.cache.has(url)) return BGM.cache.get(url);
+  const ctx = audioCtx(); if (!ctx) return null;
+  const r = await fetch(url);
+  if (!r.ok) return null;                          // 剧本声明了但文件没放，静默跳过
+  const buf = await decodeAudio(ctx, await r.arrayBuffer());
+  if (BGM.cache.size >= 3) BGM.cache.delete(BGM.cache.keys().next().value);
+  BGM.cache.set(url, buf);
+  return buf;
+}
+
 function applyBgm(rel) {
-  if (!S.sound) { stopBgm(); return; }
-  if (!rel) { stopBgm(); return; }
+  if (!S.sound || !rel) { stopBgm(); return; }
   const url = "/audio/" + rel;
-  if (BGM.cur === url && BGM.el && !BGM.el.paused) return;
+  if (BGM.cur === url) return;
+  BGM.cur = url;
+  if (!audioCtx()) { applyBgmFallback(url); return; }
+  loadBuf(url).then((buf) => {
+    if (!buf) { BGM.cur = null; return; }
+    if (BGM.cur !== url) return;                   // 幕切得比加载还快，丢弃过期结果
+    const ctx = BGM.ctx;
+    stopSrc(1.2);                                  // 上一首交叉淡出
+    const node = ctx.createBufferSource();
+    node.buffer = buf; node.loop = true;
+    // mp3 解码后会比原始素材多出几毫秒编码填充，照单全收的话每圈会漏出一小段静音。
+    // 循环长度按最近的半秒取整；差得太多说明本来就不是整长度素材，不动它。
+    const exact = Math.round(buf.duration * 2) / 2;
+    if (exact > 0 && Math.abs(buf.duration - exact) < 0.08) { node.loopStart = 0; node.loopEnd = exact; }
+    const g = ctx.createGain(); g.gain.value = 0;
+    node.connect(g); g.connect(BGM.master);
+    node.start(0);
+    g.gain.setTargetAtTime(1, ctx.currentTime, 0.5);
+    BGM.src = { node, gain: g };
+    fadeTo(BGM.VOL);
+  }).catch(() => { BGM.cur = null; });
+}
+
+/** 没有 Web Audio 的浏览器退回 <audio>：会有循环缝，但总比没有强 */
+function applyBgmFallback(url) {
   if (!BGM.el) {
     BGM.el = new Audio();
     BGM.el.loop = true;
     BGM.el.volume = 0;
-    // 文件不存在就当没这回事，绝不打扰玩家
     BGM.el.addEventListener("error", () => { BGM.cur = null; });
   }
-  BGM.cur = url;
   BGM.el.src = url;
   BGM.el.volume = 0;
-  BGM.el.play().then(() => fadeTo(0.35)).catch(() => { /* 未解锁或文件缺失 */ });
+  BGM.el.play().then(() => fadeTo(BGM.VOL)).catch(() => { BGM.cur = null; });
 }
+
+function stopSrc(fadeSec) {
+  const s = BGM.src; if (!s) return;
+  BGM.src = null;
+  const ctx = BGM.ctx, t = ctx.currentTime;
+  s.gain.gain.setTargetAtTime(0, t, fadeSec / 3);
+  try { s.node.stop(t + fadeSec); } catch {}
+}
+
 function fadeTo(target) {
-  clearInterval(BGM.fadeTimer);
-  BGM.fadeTimer = setInterval(() => {
-    if (!BGM.el) return clearInterval(BGM.fadeTimer);
+  if (BGM.master) {
+    const t = BGM.ctx.currentTime;
+    BGM.master.gain.cancelScheduledValues(t);
+    BGM.master.gain.setTargetAtTime(target, t, 0.35);
+    return;
+  }
+  clearInterval(BGM.elTimer);                      // 退回路径：手动补间
+  BGM.elTimer = setInterval(() => {
+    if (!BGM.el) return clearInterval(BGM.elTimer);
     const d = target - BGM.el.volume;
-    if (Math.abs(d) < 0.02) { BGM.el.volume = target; clearInterval(BGM.fadeTimer); return; }
+    if (Math.abs(d) < 0.02) { BGM.el.volume = target; clearInterval(BGM.elTimer); return; }
     BGM.el.volume = Math.max(0, Math.min(1, BGM.el.volume + d * 0.15));
   }, 60);
 }
+
 function stopBgm() {
-  clearInterval(BGM.fadeTimer);
+  clearInterval(BGM.elTimer);
+  fadeTo(0);
+  stopSrc(0.6);
   if (BGM.el) { try { BGM.el.pause(); } catch {} }
   BGM.cur = null;
 }
+
 /** 念白期间把 BGM 压低，说完恢复 */
 function duckBgm(down) {
-  if (BGM.el && !BGM.el.paused) fadeTo(down ? 0.12 : 0.35);
+  if (!BGM.cur) return;
+  fadeTo(down ? BGM.DUCK : BGM.VOL);
 }
 
 // 念白：先用浏览器内建 TTS 顶替，后续可替换为录音
@@ -915,10 +1004,10 @@ function stopSpeak() {
 }
 // 移动端必须在用户手势里解锁音频
 function unlockAudio() {
+  const ctx = audioCtx();              // 建/恢复的是 BGM 那一个，不另开
   if (S.audioReady) return;
   try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (Ctx) { const c = new Ctx(); const o = c.createOscillator(); const g = c.createGain(); g.gain.value = 0; o.connect(g); g.connect(c.destination); o.start(0); o.stop(0.01); }
+    if (ctx) { const o = ctx.createOscillator(); const g = ctx.createGain(); g.gain.value = 0; o.connect(g); g.connect(ctx.destination); o.start(0); o.stop(ctx.currentTime + 0.01); }
     if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); }
     S.audioReady = true;
   } catch {}

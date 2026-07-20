@@ -5,13 +5,16 @@
 import sk_s_fasttest from "../scripts/fasttest/skeleton.json";
 import sk_s_placeholder from "../scripts/placeholder/skeleton.json";
 import sk_s_radio from "../scripts/radio/skeleton.json";
+import sk_s_shop40 from "../scripts/shop40/skeleton.json";
 import pk_s_placeholder from "../scripts/placeholder/content.pack";
 import pk_s_radio from "../scripts/radio/content.pack";
+import pk_s_shop40 from "../scripts/shop40/content.pack";
 
 export const SKELETON_JSON: Record<string, unknown> = {
   "fasttest": sk_s_fasttest,
   "placeholder": sk_s_placeholder,
   "radio": sk_s_radio,
+  "shop40": sk_s_shop40,
 };
 
 /** scriptId → 文案包原文（多个剧本可共用同一个包） */
@@ -19,6 +22,7 @@ export const PACK_TEXT: Record<string, string> = {
   "fasttest": pk_s_placeholder as unknown as string,
   "placeholder": pk_s_placeholder as unknown as string,
   "radio": pk_s_radio as unknown as string,
+  "shop40": pk_s_shop40 as unknown as string,
 };
 
 /** 不对玩家展示的内部剧本（仅计时探针；占位测试本保留可见，方便自测流程） */

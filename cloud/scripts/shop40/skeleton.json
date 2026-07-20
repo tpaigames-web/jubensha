@@ -1,0 +1,460 @@
+{
+  "scriptId": "shop40",
+  "schemaVersion": 1,
+  "meta": {
+    "titleKey": "meta.title",
+    "players": 4,
+    "durationMin": 160,
+    "type": "linear_pve_reconstruction"
+  },
+  "audio": {
+    "bgmLobby": "shop40/lobby.mp3",
+    "bgmByAct": {
+      "act1": "shop40/act1.mp3",
+      "act2": "shop40/act2.mp3",
+      "act3": "shop40/act3.mp3"
+    },
+    "bgmDebrief": "shop40/debrief.mp3"
+  },
+  "characters": [
+    {
+      "id": "P1",
+      "nameKey": "char.P1.name",
+      "briefKey": "char.P1.brief"
+    },
+    {
+      "id": "P2",
+      "nameKey": "char.P2.name",
+      "briefKey": "char.P2.brief"
+    },
+    {
+      "id": "P3",
+      "nameKey": "char.P3.name",
+      "briefKey": "char.P3.brief"
+    },
+    {
+      "id": "P4",
+      "nameKey": "char.P4.name",
+      "briefKey": "char.P4.brief"
+    }
+  ],
+  "acts": [
+    {
+      "id": "act1",
+      "durationMin": 55,
+      "openingNarrationKey": "nar.act1.open",
+      "closingNarrationKey": "nar.act1.close",
+      "scriptKeys": {
+        "P1": "script.act1.P1",
+        "P2": "script.act1.P2",
+        "P3": "script.act1.P3",
+        "P4": "script.act1.P4"
+      },
+      "locations": [
+        "loc.counter",
+        "loc.stove",
+        "loc.altar"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "all_read"
+        ],
+        "timeoutMin": 60
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 30,
+          "narrationKey": "nar.act1.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act2",
+      "durationMin": 55,
+      "openingNarrationKey": "nar.act2.open",
+      "closingNarrationKey": "nar.act2.close",
+      "scriptKeys": {
+        "P1": "script.act2.P1",
+        "P2": "script.act2.P2",
+        "P3": "script.act2.P3",
+        "P4": "script.act2.P4"
+      },
+      "locations": [
+        "loc.counter",
+        "loc.stove",
+        "loc.back",
+        "loc.room"
+      ],
+      "searchQuota": {
+        "perSeat": 2
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [],
+        "timeoutMin": 60
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 30,
+          "narrationKey": "nar.act2.hint1"
+        }
+      ]
+    },
+    {
+      "id": "act3",
+      "durationMin": 50,
+      "openingNarrationKey": "nar.act3.open",
+      "closingNarrationKey": "nar.act3.close",
+      "scriptKeys": {
+        "P1": "script.act3.P1",
+        "P2": "script.act3.P2",
+        "P3": "script.act3.P3",
+        "P4": "script.act3.P4"
+      },
+      "locations": [
+        "loc.counter",
+        "loc.altar"
+      ],
+      "searchQuota": {
+        "perSeat": 1
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "vote_done",
+          "mechanic_done"
+        ],
+        "timeoutMin": 55
+      },
+      "mechanics": [
+        "timeline_puzzle"
+      ],
+      "hints": [
+        {
+          "afterMin": 30,
+          "narrationKey": "nar.act3.hint1"
+        }
+      ]
+    }
+  ],
+  "clues": [
+    {
+      "id": "c.a1.01",
+      "act": "act1",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a1.01",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.02",
+      "act": "act1",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a1.02",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.03",
+      "act": "act1",
+      "location": "loc.stove",
+      "contentKey": "clue.c.a1.03",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.04",
+      "act": "act1",
+      "location": "loc.stove",
+      "contentKey": "clue.c.a1.04",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.05",
+      "act": "act1",
+      "location": "loc.altar",
+      "contentKey": "clue.c.a1.05",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.06",
+      "act": "act1",
+      "location": "loc.altar",
+      "contentKey": "clue.c.a1.06",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.08",
+      "act": "act1",
+      "location": "loc.stove",
+      "contentKey": "clue.c.a1.08",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.09",
+      "act": "act1",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a1.09",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a1.07",
+      "act": "act1",
+      "location": "loc.altar",
+      "contentKey": "clue.c.a1.07",
+      "visibility": {
+        "type": "private",
+        "characters": [
+          "P4"
+        ]
+      }
+    },
+    {
+      "id": "c.a2.01",
+      "act": "act2",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a2.01",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.02",
+      "act": "act2",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a2.02",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.03",
+      "act": "act2",
+      "location": "loc.back",
+      "contentKey": "clue.c.a2.03",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.04",
+      "act": "act2",
+      "location": "loc.back",
+      "contentKey": "clue.c.a2.04",
+      "visibility": {
+        "type": "private",
+        "characters": [
+          "P4"
+        ]
+      }
+    },
+    {
+      "id": "c.a2.05",
+      "act": "act2",
+      "location": "loc.room",
+      "contentKey": "clue.c.a2.05",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.06",
+      "act": "act2",
+      "location": "loc.room",
+      "contentKey": "clue.c.a2.06",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.07",
+      "act": "act2",
+      "location": "loc.stove",
+      "contentKey": "clue.c.a2.07",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.08",
+      "act": "act2",
+      "location": "loc.room",
+      "contentKey": "clue.c.a2.08",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a2.09",
+      "act": "act2",
+      "location": "loc.back",
+      "contentKey": "clue.c.a2.09",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a3.01",
+      "act": "act3",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a3.01",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a3.02",
+      "act": "act3",
+      "location": "loc.altar",
+      "contentKey": "clue.c.a3.02",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a3.03",
+      "act": "act3",
+      "location": "loc.altar",
+      "contentKey": "clue.c.a3.03",
+      "visibility": {
+        "type": "public"
+      }
+    },
+    {
+      "id": "c.a3.04",
+      "act": "act3",
+      "location": "loc.counter",
+      "contentKey": "clue.c.a3.04",
+      "visibility": {
+        "type": "public"
+      }
+    }
+  ],
+  "votes": [
+    {
+      "id": "vote.final",
+      "act": "act3",
+      "mode": "single_public",
+      "promptKey": "vote.final.prompt",
+      "options": [
+        {
+          "id": "sell",
+          "labelKey": "vote.final.sell"
+        },
+        {
+          "id": "keep",
+          "labelKey": "vote.final.keep"
+        }
+      ],
+      "resultBranches": [
+        {
+          "match": "unanimous_keep",
+          "narrationKey": "nar.end.keep"
+        },
+        {
+          "match": "unanimous_sell",
+          "narrationKey": "nar.end.sell"
+        },
+        {
+          "match": "split",
+          "narrationKey": "nar.end.split"
+        }
+      ]
+    }
+  ],
+  "mechanics": [
+    {
+      "id": "timeline_puzzle",
+      "act": "act3",
+      "params": {
+        "slots": 4,
+        "slotLabels": [
+          "一星期前·夜",
+          "周三·晚 9 点",
+          "周三·深夜 11 点",
+          "周四·清晨 6:10"
+        ],
+        "fragments": [
+          {
+            "character": "P3",
+            "slot": 0,
+            "label": "他从神龛底下摸出铁盒，把最后的钱数给我，手抖了一下，笑着说「这次是最后一次咯」。我走的时候回头看，他在妈的照片前站了很久，嘴巴一直在动。"
+          },
+          {
+            "character": "P2",
+            "slot": 1,
+            "label": "他打电话给我，只说了一句：「这个星期六你回来一趟好不好。」我说月底太忙，下个月吧。他停了两秒，说「好」，就挂了。他从来没主动叫我回来过。"
+          },
+          {
+            "character": "P1",
+            "slot": 2,
+            "label": "我起夜下楼倒水，看见柜台那盏灯还亮着。他一个人坐在后面，摊着一张纸看。我以为他在算账，就上楼睡了。那是我最后一次看见他坐着。"
+          },
+          {
+            "character": "P4",
+            "slot": 3,
+            "label": "我照常六点十分来开门，门是从里面反锁的——三十年来第一次。我敲了很久没人应，最后用自己那把钥匙开的门。他伏在柜台上，手里还攥着粉笔。"
+          }
+        ]
+      }
+    }
+  ],
+  "debrief": {
+    "segments": [
+      {
+        "id": "d1",
+        "contentKey": "debrief.1",
+        "unlock": "manual"
+      },
+      {
+        "id": "d2",
+        "contentKey": "debrief.2",
+        "unlock": "manual"
+      },
+      {
+        "id": "d3",
+        "contentKey": "debrief.3",
+        "unlock": "manual"
+      },
+      {
+        "id": "d4",
+        "contentKey": "debrief.4",
+        "unlock": "manual"
+      },
+      {
+        "id": "d5",
+        "contentKey": "debrief.5",
+        "unlock": "manual"
+      },
+      {
+        "id": "d6",
+        "contentKey": "debrief.6",
+        "unlock": "manual"
+      },
+      {
+        "id": "d7",
+        "contentKey": "debrief.7",
+        "unlock": "manual"
+      }
+    ]
+  }
+}
