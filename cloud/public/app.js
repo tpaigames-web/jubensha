@@ -873,15 +873,17 @@ $("btn-sound").onclick = () => {
   try { localStorage.setItem("jbs2_sound", S.sound ? "1" : "0"); } catch {}
   if (S.sound) { unlockAudio(); applyBgm(S.st?.script?.bgm || null); }
   else { stopSpeak(); stopBgm(); }
-  toast(S.sound ? "声音已开启（念白+背景音乐）" : "已静音", true);
+  toast(S.sound ? "主持人念白已开启" : "已静音", true);
 };
 
-// ---- 背景音乐：剧本声明了才放，文件缺失静默跳过 ----
+// ---- 背景音乐：默认没有。剧本在 skeleton 里声明了 audio 才放 ----
+// 现在没有任何剧本声明——三小时的底噪吵，还压念白。这套播放层留着备用。
 // 用 Web Audio 循环，不用 <audio loop>：mp3 首尾带编码填充，
 // <audio loop> 每转一圈会漏出几十毫秒空档，垫在持续低音上非常刺耳。
 const BGM = {
   ctx: null, master: null, src: null, cur: null, cache: new Map(),
-  el: null, elTimer: null, VOL: 0.35, DUCK: 0.12,
+  // 音量刻意压得很低：真要开 BGM，它只能是垫在念白底下的东西，不能抢
+  el: null, elTimer: null, VOL: 0.16, DUCK: 0.06,
 };
 
 /** 惰性建 AudioContext，并在每次用到时尝试恢复（移动端会自动挂起） */

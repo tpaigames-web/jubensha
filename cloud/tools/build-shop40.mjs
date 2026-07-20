@@ -810,11 +810,8 @@ const skeleton = {
   scriptId: ID,
   schemaVersion: 1,
   meta: { titleKey: "meta.title", players: 4, durationMin: 160, type: "linear_pve_reconstruction" },
-  audio: {
-    bgmLobby: "shop40/lobby.mp3",
-    bgmByAct: { act1: "shop40/act1.mp3", act2: "shop40/act2.mp3", act3: "shop40/act3.mp3" },
-    bgmDebrief: "shop40/debrief.mp3",
-  },
+  // 不配 BGM：三小时的底噪吵，也压念白。要加就在这里声明 audio，
+  // 素材可用 tools/gen-audio.py 生成（见 README）。
   characters,
   acts,
   clues,

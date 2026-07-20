@@ -45,21 +45,12 @@ node tools/convert.mjs "C:\sohai\jubensha\scripts\xxx.json" <新剧本id>
 
 ---
 
-## 背景音乐
+## 背景音乐（默认没有）
 
-`public/audio/` 下已经有两套 60 秒无缝循环的氛围垫：
+**所有剧本目前都不放背景音乐。** 试过一版合成氛围垫，三小时下来太吵、还压念白，已撤掉。
+主持人念白不受影响。
 
-- `common/*` —— 通用悬疑垫，**任何剧本不声明 audio 时自动使用**（按幕序递进）
-- `shop40/*` —— 《四十年》专用（雨夜老店）
-
-这些不是配乐，是低频持续音 + 雨声的「底噪」，用来垫住三小时的沉默、不抢台词。
-全部由 `tools/gen-audio.py` 用代码合成，无版权问题，随时可以换成真正的音乐：
-
-```bash
-python tools/gen-audio.py     # 需要 ffmpeg（libmp3lame）
-```
-
-想给某个剧本配专属音乐，把文件放 `public/audio/<剧本id>/`，再在 `skeleton.json` 里声明：
+要给某个剧本配乐，把文件放 `public/audio/<剧本id>/`，再在 `skeleton.json` 里声明：
 
 ```json
 "audio": {
@@ -69,9 +60,13 @@ python tools/gen-audio.py     # 需要 ffmpeg（libmp3lame）
 }
 ```
 
-幕切换时交叉淡入淡出，主持人念白时自动压低。**文件不存在时静默跳过，不会报错。**
+幕切换时交叉淡入淡出，主持人念白时自动压低。**没声明或文件不存在时静默跳过，不会报错。**
+音量在 `public/app.js` 的 `BGM.VOL`（默认 0.16，刻意压得很低）。
 循环走 Web Audio 而不是 `<audio loop>`——后者每转一圈会漏出 mp3 的编码填充，
 垫在持续低音上是很明显的一声断裂。
+
+需要现成素材的话，`python tools/gen-audio.py`（要 ffmpeg）能合成一套无版权的氛围垫，
+生成的就是之前撤掉的那十首。
 
 念白目前用浏览器内建 TTS；换成录音文件的话在 `public/app.js` 的 `speak()` 里替换即可。
 

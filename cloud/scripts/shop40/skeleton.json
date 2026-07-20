@@ -7,15 +7,6 @@
     "durationMin": 160,
     "type": "linear_pve_reconstruction"
   },
-  "audio": {
-    "bgmLobby": "shop40/lobby.mp3",
-    "bgmByAct": {
-      "act1": "shop40/act1.mp3",
-      "act2": "shop40/act2.mp3",
-      "act3": "shop40/act3.mp3"
-    },
-    "bgmDebrief": "shop40/debrief.mp3"
-  },
   "characters": [
     {
       "id": "P1",
