@@ -128,7 +128,8 @@ export interface SnapshotFull {
     /** 当前阶段该放的背景音乐（public/audio/ 下的相对路径）；无则为 null */
     bgm: string | null;
   };
-  clues: { id: string; contentKey: string; location: string; private: boolean }[];
+  /** location 为 null 表示不是搜出来的（开幕自动下发） */
+  clues: { id: string; titleKey?: string; contentKey: string; location: string | null; private: boolean }[];
   vote: {
     voteId: string;
     mode: string;

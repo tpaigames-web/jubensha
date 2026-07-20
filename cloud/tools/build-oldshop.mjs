@@ -601,6 +601,19 @@ const NAR = {
 
 有些决定，是一定要有人做的。
 `,
+  // 机制卡住时的兜底：拼图现在必须拼对才算完成，没有这两级帮扶会一直干等到幕超时
+  "act3.assist1": `
+不用猜，念出来。
+
+每一段里都写着时间的痕迹：灯还亮着、门是锁的、天刚亮。
+
+把四段按「先后」而不是按「谁说的」排一遍。
+`,
+  "act3.assist2": `
+我替你们钉住一格。
+
+那一格现在是对的，不会再动了。剩下的以它为准往前后推。
+`,
 
   "end.keep": `
 全场一致 · 留下
@@ -830,7 +843,16 @@ const skeleton = {
   }],
   mechanics: [{
     id: "timeline_puzzle", act: "act3",
-    params: { slots: TIMELINE.slotLabels.length, slotLabels: TIMELINE.slotLabels, fragments: TIMELINE.fragments },
+    params: {
+      slots: TIMELINE.slotLabels.length,
+      slotLabels: TIMELINE.slotLabels,
+      fragments: TIMELINE.fragments,
+      // 拼图必须拼对才算完成，所以要有帮扶：先给思路，再直接钉死一格
+      hints: [
+        { afterAttempts: 3, narrationKey: "nar.act3.assist1" },
+        { afterMin: 20, narrationKey: "nar.act3.assist2", effect: "lock_one_correct" },
+      ],
+    },
   }],
   debrief: { segments: DEBRIEF.map((_, i) => ({ id: `d${i + 1}`, contentKey: `debrief.${i + 1}`, unlock: "manual" })) },
 };

@@ -393,6 +393,17 @@
             "slot": 5,
             "label": "电话断了。她最后一句话是——他们不开门。"
           }
+        ],
+        "hints": [
+          {
+            "afterAttempts": 3,
+            "narrationKey": "nar.act3.assist1"
+          },
+          {
+            "afterMin": 14,
+            "narrationKey": "nar.act3.assist2",
+            "effect": "lock_one_correct"
+          }
         ]
       }
     }

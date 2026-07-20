@@ -25,6 +25,11 @@ if (!ids.length) {
 
 const safe = (id) => "s_" + id.replace(/[^a-zA-Z0-9_]/g, "_");
 
+const skeletons = {};
+for (const id of ids) {
+  skeletons[id] = JSON.parse(readFileSync(join(scriptsDir, id, "skeleton.json"), "utf8"));
+}
+
 // 有独立 content.pack 的用自己的；没有的复用 placeholder 的（例如计时探针本）
 const packOf = {};
 for (const id of ids) {
@@ -53,15 +58,18 @@ lines.push("export const PACK_TEXT: Record<string, string> = {");
 for (const id of ids) lines.push(`  ${JSON.stringify(id)}: pk_${safe(packOf[id])} as unknown as string,`);
 lines.push("};");
 lines.push("");
-lines.push("/** 不对玩家展示的内部剧本：测试夹具，不该出现在朋友的选本列表里。");
+// 不进选本列表的：测试夹具，以及 meta.draft 为真的在制品（正文还没写完）
+const hidden = ["fasttest", "placeholder", ...ids.filter((id) => skeletons[id]?.meta?.draft)];
+lines.push("/** 不对玩家展示的剧本：测试夹具 + meta.draft 的在制品。");
 lines.push(" *  仍可用 /ws?room=XXXX&script=<id> 直连自测。 */");
-lines.push("export const HIDDEN_SCRIPTS = new Set<string>([\"fasttest\", \"placeholder\"]);");
+lines.push(`export const HIDDEN_SCRIPTS = new Set<string>(${JSON.stringify([...new Set(hidden)])});`);
 lines.push("");
 
 writeFileSync(resolve(__dir, "..", "src", "registry.gen.ts"), lines.join("\n"), "utf8");
 
 console.log("已生成 src/registry.gen.ts");
 for (const id of ids) {
-  const sk = JSON.parse(readFileSync(join(scriptsDir, id, "skeleton.json"), "utf8"));
-  console.log(`  · ${id.padEnd(14)} ${sk.meta?.players ?? "?"}人 · ${sk.acts?.length ?? 0}幕 · 文案包=${packOf[id]}`);
+  const sk = skeletons[id];
+  const tag = hidden.includes(id) ? "  [不展示]" : "";
+  console.log(`  · ${id.padEnd(14)} ${sk.meta?.players ?? "?"}人 · ${sk.acts?.length ?? 0}幕 · 文案包=${packOf[id]}${tag}`);
 }

@@ -6,10 +6,12 @@ import sk_s_fasttest from "../scripts/fasttest/skeleton.json";
 import sk_s_oldshop from "../scripts/oldshop/skeleton.json";
 import sk_s_placeholder from "../scripts/placeholder/skeleton.json";
 import sk_s_radio from "../scripts/radio/skeleton.json";
+import sk_s_shop40 from "../scripts/shop40/skeleton.json";
 import sk_s_typhoon from "../scripts/typhoon/skeleton.json";
 import pk_s_placeholder from "../scripts/placeholder/content.pack";
 import pk_s_oldshop from "../scripts/oldshop/content.pack";
 import pk_s_radio from "../scripts/radio/content.pack";
+import pk_s_shop40 from "../scripts/shop40/content.pack";
 import pk_s_typhoon from "../scripts/typhoon/content.pack";
 
 export const SKELETON_JSON: Record<string, unknown> = {
@@ -17,6 +19,7 @@ export const SKELETON_JSON: Record<string, unknown> = {
   "oldshop": sk_s_oldshop,
   "placeholder": sk_s_placeholder,
   "radio": sk_s_radio,
+  "shop40": sk_s_shop40,
   "typhoon": sk_s_typhoon,
 };
 
@@ -26,9 +29,10 @@ export const PACK_TEXT: Record<string, string> = {
   "oldshop": pk_s_oldshop as unknown as string,
   "placeholder": pk_s_placeholder as unknown as string,
   "radio": pk_s_radio as unknown as string,
+  "shop40": pk_s_shop40 as unknown as string,
   "typhoon": pk_s_typhoon as unknown as string,
 };
 
-/** 不对玩家展示的内部剧本：测试夹具，不该出现在朋友的选本列表里。
+/** 不对玩家展示的剧本：测试夹具 + meta.draft 的在制品。
  *  仍可用 /ws?room=XXXX&script=<id> 直连自测。 */
-export const HIDDEN_SCRIPTS = new Set<string>(["fasttest", "placeholder"]);
+export const HIDDEN_SCRIPTS = new Set<string>(["fasttest","placeholder","shop40"]);

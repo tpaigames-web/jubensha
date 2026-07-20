@@ -1,0 +1,973 @@
+{
+  "scriptId": "shop40",
+  "schemaVersion": 1,
+  "contentPack": "shop40.content.pack",
+  "meta": {
+    "titleKey": "meta.title",
+    "subtitleKey": "meta.subtitle",
+    "blurbKey": "meta.blurb",
+    "players": 4,
+    "genderPolicy": "any",
+    "reversibleRoles": true,
+    "durationMin": 180,
+    "type": "linear_pve_reconstruction",
+    "pvp": false,
+    "difficulty": {
+      "reasoning": 3,
+      "mechanic": 3,
+      "emotion": 4
+    },
+    "contentRating": "family_safe",
+    "contentWarnings": [],
+    "introNarrationKey": "nar.intro",
+    "draft": true
+  },
+  "phases": [
+    {
+      "id": "lobby",
+      "durationMin": 10
+    },
+    {
+      "id": "reading",
+      "durationMin": 25,
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "timeoutMin": 30
+      }
+    },
+    {
+      "id": "playing",
+      "durationMin": 140
+    },
+    {
+      "id": "debrief",
+      "durationMin": 20
+    },
+    {
+      "id": "ended"
+    }
+  ],
+  "characters": [
+    {
+      "id": "P1",
+      "nameKey": "char.P1.name",
+      "briefKey": "char.P1.brief",
+      "tagsKey": "char.P1.tags",
+      "avatarSlot": "avatar1"
+    },
+    {
+      "id": "P2",
+      "nameKey": "char.P2.name",
+      "briefKey": "char.P2.brief",
+      "tagsKey": "char.P2.tags",
+      "avatarSlot": "avatar2"
+    },
+    {
+      "id": "P3",
+      "nameKey": "char.P3.name",
+      "briefKey": "char.P3.brief",
+      "tagsKey": "char.P3.tags",
+      "avatarSlot": "avatar3"
+    },
+    {
+      "id": "P4",
+      "nameKey": "char.P4.name",
+      "briefKey": "char.P4.brief",
+      "tagsKey": "char.P4.tags",
+      "avatarSlot": "avatar4"
+    }
+  ],
+  "locations": [
+    {
+      "id": "loc.counter",
+      "act": "act1",
+      "nameKey": "loc.counter.name",
+      "descKey": "loc.counter.desc",
+      "clueCount": 3
+    },
+    {
+      "id": "loc.stove",
+      "act": "act1",
+      "nameKey": "loc.stove.name",
+      "descKey": "loc.stove.desc",
+      "clueCount": 2
+    },
+    {
+      "id": "loc.altar",
+      "act": "act1",
+      "nameKey": "loc.altar.name",
+      "descKey": "loc.altar.desc",
+      "clueCount": 2
+    },
+    {
+      "id": "loc.wall",
+      "act": "act1",
+      "nameKey": "loc.wall.name",
+      "descKey": "loc.wall.desc",
+      "clueCount": 2
+    },
+    {
+      "id": "loc.bedroom",
+      "act": "act2",
+      "nameKey": "loc.bedroom.name",
+      "descKey": "loc.bedroom.desc",
+      "clueCount": 3
+    },
+    {
+      "id": "loc.storage",
+      "act": "act2",
+      "nameKey": "loc.storage.name",
+      "descKey": "loc.storage.desc",
+      "clueCount": 2
+    },
+    {
+      "id": "loc.courtyard",
+      "act": "act2",
+      "nameKey": "loc.courtyard.name",
+      "descKey": "loc.courtyard.desc",
+      "clueCount": 2
+    },
+    {
+      "id": "loc.cabinet",
+      "act": "act2",
+      "nameKey": "loc.cabinet.name",
+      "descKey": "loc.cabinet.desc",
+      "clueCount": 2
+    },
+    {
+      "id": "loc.attic",
+      "act": "act2",
+      "nameKey": "loc.attic.name",
+      "descKey": "loc.attic.desc",
+      "clueCount": 2
+    }
+  ],
+  "acts": [
+    {
+      "id": "act1",
+      "indexLabel": "第一幕",
+      "titleKey": "act1.title",
+      "durationMin": 50,
+      "scriptKeys": {
+        "P1": "script.act1.P1",
+        "P2": "script.act1.P2",
+        "P3": "script.act1.P3",
+        "P4": "script.act1.P4"
+      },
+      "scriptReadInPhase": "reading",
+      "openingNarrationKey": "nar.act1.open",
+      "closingNarrationKey": "nar.act1.close",
+      "locations": [
+        "loc.counter",
+        "loc.stove",
+        "loc.altar",
+        "loc.wall"
+      ],
+      "searchQuota": {
+        "perSeat": 3,
+        "scope": "act"
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "all_read",
+          "quota_used_or_ready"
+        ],
+        "timeoutMin": 55
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 30,
+          "narrationKey": "nar.act1.hint1"
+        },
+        {
+          "afterMin": 42,
+          "narrationKey": "nar.act1.hint2"
+        }
+      ]
+    },
+    {
+      "id": "act2",
+      "indexLabel": "第二幕",
+      "titleKey": "act2.title",
+      "durationMin": 55,
+      "scriptKeys": {
+        "P1": "script.act2.P1",
+        "P2": "script.act2.P2",
+        "P3": "script.act2.P3",
+        "P4": "script.act2.P4"
+      },
+      "scriptReadInPhase": "act",
+      "openingNarrationKey": "nar.act2.open",
+      "closingNarrationKey": "nar.act2.close",
+      "locations": [
+        "loc.bedroom",
+        "loc.storage",
+        "loc.courtyard",
+        "loc.cabinet",
+        "loc.attic"
+      ],
+      "searchQuota": {
+        "perSeat": 3,
+        "scope": "act"
+      },
+      "advance": {
+        "type": "all_ready_or_timeout",
+        "requires": [
+          "all_read",
+          "quota_used_or_ready"
+        ],
+        "timeoutMin": 60
+      },
+      "mechanics": [],
+      "hints": [
+        {
+          "afterMin": 32,
+          "narrationKey": "nar.act2.hint1"
+        },
+        {
+          "afterMin": 46,
+          "narrationKey": "nar.act2.hint2"
+        }
+      ]
+    },
+    {
+      "id": "act3",
+      "indexLabel": "第三幕",
+      "titleKey": "act3.title",
+      "durationMin": 35,
+      "scriptKeys": {
+        "P1": "script.act3.P1",
+        "P2": "script.act3.P2",
+        "P3": "script.act3.P3",
+        "P4": "script.act3.P4"
+      },
+      "scriptReadInPhase": "act",
+      "openingNarrationKey": "nar.act3.open",
+      "closingNarrationKey": null,
+      "locations": [],
+      "searchQuota": {
+        "perSeat": 0,
+        "scope": "act"
+      },
+      "advance": {
+        "type": "mechanic_then_vote",
+        "requires": [
+          "mechanic:timeline_puzzle",
+          "vote:vote.final"
+        ],
+        "timeoutMin": 45
+      },
+      "mechanics": [
+        "timeline_puzzle"
+      ],
+      "hints": []
+    }
+  ],
+  "clues": [
+    {
+      "id": "c.act1.01",
+      "act": "act1",
+      "location": "loc.counter",
+      "titleKey": "c.act1.01.title",
+      "contentKey": "c.act1.01.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.02",
+      "act": "act1",
+      "location": "loc.counter",
+      "titleKey": "c.act1.02.title",
+      "contentKey": "c.act1.02.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.03",
+      "act": "act1",
+      "location": "loc.counter",
+      "titleKey": "c.act1.03.title",
+      "contentKey": "c.act1.03.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.04",
+      "act": "act1",
+      "location": "loc.stove",
+      "titleKey": "c.act1.04.title",
+      "contentKey": "c.act1.04.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.05",
+      "act": "act1",
+      "location": "loc.stove",
+      "titleKey": "c.act1.05.title",
+      "contentKey": "c.act1.05.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.06",
+      "act": "act1",
+      "location": "loc.altar",
+      "titleKey": "c.act1.06.title",
+      "contentKey": "c.act1.06.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.07",
+      "act": "act1",
+      "location": "loc.altar",
+      "titleKey": "c.act1.07.title",
+      "contentKey": "c.act1.07.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.08",
+      "act": "act1",
+      "location": "loc.wall",
+      "titleKey": "c.act1.08.title",
+      "contentKey": "c.act1.08.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.09",
+      "act": "act1",
+      "location": "loc.wall",
+      "titleKey": "c.act1.09.title",
+      "contentKey": "c.act1.09.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.01",
+      "act": "act2",
+      "location": "loc.bedroom",
+      "titleKey": "c.act2.01.title",
+      "contentKey": "c.act2.01.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.02",
+      "act": "act2",
+      "location": "loc.bedroom",
+      "titleKey": "c.act2.02.title",
+      "contentKey": "c.act2.02.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.03",
+      "act": "act2",
+      "location": "loc.bedroom",
+      "titleKey": "c.act2.03.title",
+      "contentKey": "c.act2.03.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.04",
+      "act": "act2",
+      "location": "loc.storage",
+      "titleKey": "c.act2.04.title",
+      "contentKey": "c.act2.04.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.05",
+      "act": "act2",
+      "location": "loc.storage",
+      "titleKey": "c.act2.05.title",
+      "contentKey": "c.act2.05.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.06",
+      "act": "act2",
+      "location": "loc.courtyard",
+      "titleKey": "c.act2.06.title",
+      "contentKey": "c.act2.06.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.07",
+      "act": "act2",
+      "location": "loc.courtyard",
+      "titleKey": "c.act2.07.title",
+      "contentKey": "c.act2.07.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.08",
+      "act": "act2",
+      "location": "loc.cabinet",
+      "titleKey": "c.act2.08.title",
+      "contentKey": "c.act2.08.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.09",
+      "act": "act2",
+      "location": "loc.cabinet",
+      "titleKey": "c.act2.09.title",
+      "contentKey": "c.act2.09.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.10",
+      "act": "act2",
+      "location": "loc.attic",
+      "titleKey": "c.act2.10.title",
+      "contentKey": "c.act2.10.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.11",
+      "act": "act2",
+      "location": "loc.attic",
+      "titleKey": "c.act2.11.title",
+      "contentKey": "c.act2.11.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.priv.P1",
+      "act": "act1",
+      "location": null,
+      "grant": "on_act_start",
+      "titleKey": "c.act1.priv.P1.title",
+      "contentKey": "c.act1.priv.P1.content",
+      "visibility": {
+        "type": "private",
+        "seats": [
+          "P1"
+        ]
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.priv.P2",
+      "act": "act1",
+      "location": null,
+      "grant": "on_act_start",
+      "titleKey": "c.act1.priv.P2.title",
+      "contentKey": "c.act1.priv.P2.content",
+      "visibility": {
+        "type": "private",
+        "seats": [
+          "P2"
+        ]
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.priv.P3",
+      "act": "act1",
+      "location": null,
+      "grant": "on_act_start",
+      "titleKey": "c.act1.priv.P3.title",
+      "contentKey": "c.act1.priv.P3.content",
+      "visibility": {
+        "type": "private",
+        "seats": [
+          "P3"
+        ]
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act1.priv.P4",
+      "act": "act1",
+      "location": null,
+      "grant": "on_act_start",
+      "titleKey": "c.act1.priv.P4.title",
+      "contentKey": "c.act1.priv.P4.content",
+      "visibility": {
+        "type": "private",
+        "seats": [
+          "P4"
+        ]
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.priv.P1",
+      "act": "act2",
+      "location": null,
+      "grant": "on_act_start",
+      "titleKey": "c.act2.priv.P1.title",
+      "contentKey": "c.act2.priv.P1.content",
+      "visibility": {
+        "type": "private",
+        "seats": [
+          "P1"
+        ]
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.priv.P2",
+      "act": "act2",
+      "location": null,
+      "grant": "on_act_start",
+      "titleKey": "c.act2.priv.P2.title",
+      "contentKey": "c.act2.priv.P2.content",
+      "visibility": {
+        "type": "private",
+        "seats": [
+          "P2"
+        ]
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.priv.P3",
+      "act": "act2",
+      "location": null,
+      "grant": "on_act_start",
+      "titleKey": "c.act2.priv.P3.title",
+      "contentKey": "c.act2.priv.P3.content",
+      "visibility": {
+        "type": "private",
+        "seats": [
+          "P3"
+        ]
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.priv.P4",
+      "act": "act2",
+      "location": null,
+      "grant": "on_act_start",
+      "titleKey": "c.act2.priv.P4.title",
+      "contentKey": "c.act2.priv.P4.content",
+      "visibility": {
+        "type": "private",
+        "seats": [
+          "P4"
+        ]
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.cond.01",
+      "act": "act2",
+      "location": null,
+      "grant": "on_condition",
+      "condition": {
+        "type": "all_clues_unlocked",
+        "clues": [
+          "c.act2.03"
+        ]
+      },
+      "titleKey": "c.act2.cond.01.title",
+      "contentKey": "c.act2.cond.01.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act2.cond.02",
+      "act": "act2",
+      "location": null,
+      "grant": "on_condition",
+      "condition": {
+        "type": "all_clues_unlocked",
+        "clues": [
+          "c.act2.07",
+          "c.act2.10"
+        ]
+      },
+      "titleKey": "c.act2.cond.02.title",
+      "contentKey": "c.act2.cond.02.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act3.01",
+      "act": "act3",
+      "location": null,
+      "grant": "on_mechanic_complete",
+      "titleKey": "c.act3.01.title",
+      "contentKey": "c.act3.01.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act3.02",
+      "act": "act3",
+      "location": null,
+      "grant": "on_mechanic_complete",
+      "titleKey": "c.act3.02.title",
+      "contentKey": "c.act3.02.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act3.03",
+      "act": "act3",
+      "location": null,
+      "grant": "on_mechanic_complete",
+      "titleKey": "c.act3.03.title",
+      "contentKey": "c.act3.03.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    },
+    {
+      "id": "c.act3.04",
+      "act": "act3",
+      "location": null,
+      "grant": "on_mechanic_complete",
+      "titleKey": "c.act3.04.title",
+      "contentKey": "c.act3.04.content",
+      "visibility": {
+        "type": "public"
+      },
+      "traceTo": "SEALED"
+    }
+  ],
+  "mechanics": [
+    {
+      "id": "timeline_puzzle",
+      "act": "act3",
+      "componentVersion": 1,
+      "params": {
+        "boardTitleKey": "tl.board.title",
+        "boardHintKey": "tl.board.hint",
+        "slots": [
+          {
+            "id": "s1",
+            "labelKey": "tl.slot.s1",
+            "order": 1
+          },
+          {
+            "id": "s2",
+            "labelKey": "tl.slot.s2",
+            "order": 2
+          },
+          {
+            "id": "s3",
+            "labelKey": "tl.slot.s3",
+            "order": 3
+          },
+          {
+            "id": "s4",
+            "labelKey": "tl.slot.s4",
+            "order": 4
+          },
+          {
+            "id": "s5",
+            "labelKey": "tl.slot.s5",
+            "order": 5
+          },
+          {
+            "id": "s6",
+            "labelKey": "tl.slot.s6",
+            "order": 6
+          },
+          {
+            "id": "s7",
+            "labelKey": "tl.slot.s7",
+            "order": 7
+          },
+          {
+            "id": "s8",
+            "labelKey": "tl.slot.s8",
+            "order": 8
+          }
+        ],
+        "fragments": [
+          {
+            "id": "f1",
+            "owner": "P1",
+            "contentKey": "tl.frag.f1.full",
+            "summaryKey": "tl.frag.f1.summary"
+          },
+          {
+            "id": "f2",
+            "owner": "P1",
+            "contentKey": "tl.frag.f2.full",
+            "summaryKey": "tl.frag.f2.summary"
+          },
+          {
+            "id": "f3",
+            "owner": "P2",
+            "contentKey": "tl.frag.f3.full",
+            "summaryKey": "tl.frag.f3.summary"
+          },
+          {
+            "id": "f4",
+            "owner": "P2",
+            "contentKey": "tl.frag.f4.full",
+            "summaryKey": "tl.frag.f4.summary"
+          },
+          {
+            "id": "f5",
+            "owner": "P3",
+            "contentKey": "tl.frag.f5.full",
+            "summaryKey": "tl.frag.f5.summary"
+          },
+          {
+            "id": "f6",
+            "owner": "P3",
+            "contentKey": "tl.frag.f6.full",
+            "summaryKey": "tl.frag.f6.summary"
+          },
+          {
+            "id": "f7",
+            "owner": "P4",
+            "contentKey": "tl.frag.f7.full",
+            "summaryKey": "tl.frag.f7.summary"
+          },
+          {
+            "id": "f8",
+            "owner": "P4",
+            "contentKey": "tl.frag.f8.full",
+            "summaryKey": "tl.frag.f8.summary"
+          }
+        ],
+        "decoyCount": 1,
+        "discardZone": {
+          "enabled": true,
+          "labelKey": "tl.discard.label"
+        },
+        "solution": "SEALED",
+        "gapSlot": "SEALED",
+        "feedback": {
+          "mode": "count_only",
+          "note": "只回报正确归位数量，绝不回报哪一个正确",
+          "cooldownSec": 30,
+          "maxAttempts": null
+        },
+        "visibility": {
+          "ownFragment": "full",
+          "othersFragment": "summary",
+          "note": "玩家只能读到自己碎片的完整文本，别人的只有一行摘要；细节必须在公聊里口述。这是本机制的讨论驱动力，不得放宽。"
+        },
+        "placement": {
+          "who": "any_seat",
+          "note": "任何人都可以拖动任何碎片（包括别人的），但只有拥有者能看到全文"
+        },
+        "hints": [
+          {
+            "afterAttempts": 3,
+            "narrationKey": "nar.act3.hint1"
+          },
+          {
+            "afterAttempts": 6,
+            "narrationKey": "nar.act3.hint2"
+          },
+          {
+            "afterMin": 15,
+            "narrationKey": "nar.act3.hint3",
+            "effect": "lock_one_correct"
+          },
+          {
+            "afterMin": 25,
+            "narrationKey": "nar.act3.hint4",
+            "effect": "reveal_decoy"
+          }
+        ],
+        "onComplete": {
+          "narrationKey": "nar.act3.reveal",
+          "unlockClues": [
+            "c.act3.01",
+            "c.act3.02",
+            "c.act3.03",
+            "c.act3.04"
+          ],
+          "openVote": "vote.final"
+        }
+      }
+    }
+  ],
+  "votes": [
+    {
+      "id": "vote.final",
+      "act": "act3",
+      "mode": "single_public",
+      "promptKey": "vote.final.prompt",
+      "options": [
+        {
+          "id": "sell",
+          "labelKey": "vote.final.opt.sell"
+        },
+        {
+          "id": "keep",
+          "labelKey": "vote.final.opt.keep"
+        }
+      ],
+      "revealPolicy": "after_all_cast",
+      "allowChangeBeforeClose": true,
+      "recordFullTally": true,
+      "resultBranches": [
+        {
+          "match": "4-0:sell",
+          "narrationKey": "end.sell.unanimous"
+        },
+        {
+          "match": "4-0:keep",
+          "narrationKey": "end.keep.unanimous"
+        },
+        {
+          "match": "3-1:sell",
+          "narrationKey": "end.sell.majority"
+        },
+        {
+          "match": "3-1:keep",
+          "narrationKey": "end.keep.majority"
+        },
+        {
+          "match": "2-2",
+          "narrationKey": "end.tie"
+        }
+      ]
+    }
+  ],
+  "debrief": {
+    "mode": "segmented",
+    "advance": "any_seat_click",
+    "segments": [
+      {
+        "id": "d1",
+        "titleKey": "debrief.d1.title",
+        "contentKey": "debrief.d1.content"
+      },
+      {
+        "id": "d2",
+        "titleKey": "debrief.d2.title",
+        "contentKey": "debrief.d2.content"
+      },
+      {
+        "id": "d3",
+        "titleKey": "debrief.d3.title",
+        "contentKey": "debrief.d3.content"
+      },
+      {
+        "id": "d4",
+        "titleKey": "debrief.d4.title",
+        "contentKey": "debrief.d4.content"
+      },
+      {
+        "id": "d5",
+        "titleKey": "debrief.d5.title",
+        "contentKey": "debrief.d5.content"
+      }
+    ],
+    "epilogueKey": "debrief.epilogue"
+  },
+  "audio": {
+    "tracks": [
+      {
+        "id": "bgm.lobby",
+        "loop": true,
+        "phase": "lobby"
+      },
+      {
+        "id": "bgm.read",
+        "loop": true,
+        "phase": "reading"
+      },
+      {
+        "id": "bgm.act1",
+        "loop": true,
+        "act": "act1"
+      },
+      {
+        "id": "bgm.act2",
+        "loop": true,
+        "act": "act2"
+      },
+      {
+        "id": "bgm.act3",
+        "loop": true,
+        "act": "act3"
+      },
+      {
+        "id": "bgm.reveal",
+        "loop": false,
+        "trigger": "mechanic_complete"
+      },
+      {
+        "id": "bgm.debrief",
+        "loop": true,
+        "phase": "debrief"
+      }
+    ],
+    "sfx": [
+      "sfx.clue",
+      "sfx.vote",
+      "sfx.tick",
+      "sfx.correct",
+      "sfx.wrong"
+    ],
+    "ttsFallback": true
+  },
+  "contentKeyManifest": "见 content-keys.txt，共 N 项，须与 content.pack 一一对应"
+}

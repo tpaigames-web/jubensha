@@ -126,27 +126,42 @@ ok(await readyAll(P, 2), "全员就绪 → 进入第三幕");
 const m0 = st(P[0])?.mechanic;
 ok(m0?.mechanicId === "timeline_puzzle", "第三幕加载时间线拼图");
 ok(m0?.state?.slots?.length === 6, "时间线 6 格（3 人本靠每人两枚碎片撑起难度）");
-ok((m0?.state?.slotLabels || []).length === 6, "六格都带时间提示");
-ok((m0?.state?.slotLabels || []).includes("23:31"), "时间提示是真实时刻");
+ok((m0?.state?.slots || []).every((s) => s.label), "六格都带时间提示");
+ok((m0?.state?.slots || []).some((s) => s.label === "23:31"), "时间提示是真实时刻");
 
 await waitFor(() => P.every((p) => (st(p)?.mechanic?.state?.myFragments || []).length === 2));
 const frags = P.map((p) => st(p)?.mechanic?.state?.myFragments || []);
 ok(frags.every((f) => f.length === 2), "每人恰好持有 2 枚碎片");
+ok(frags.flat().every((f) => f.mine === true), "自己的碎片标记为 mine");
 ok(new Set(frags.flat().map((f) => f.label)).size === 6, "六枚碎片内容各不相同");
 ok(!P[1].allRaw().includes(frags[0][0].label), "别人手上未打出的碎片：全文搜索零命中");
 
-// 真实时序：P1→格2、格5；P2→格3、格6；P3→格1、格4（下标 0 起）
+const place = async (i, k, slot) => {
+  P[i].send({ type: "mechanic.action", mechanicId: "timeline_puzzle",
+              payload: { op: "place", fragId: frags[i][k].fragId, slot } });
+  await wait(150);
+};
+const take = async (i, slot) => {
+  P[i].send({ type: "mechanic.action", mechanicId: "timeline_puzzle", payload: { op: "take", slot } });
+  await wait(140);
+};
+
+// 先故意全摆错：验证摆满 ≠ 完成，且校对只回报数量
+const wrong = { P1: [5, 0], P2: [4, 1], P3: [3, 2] };
+for (let i = 0; i < 3; i++) for (let k = 0; k < 2; k++) await place(i, k, wrong["P" + (i + 1)][k]);
+ok(await waitFor(() => st(P[0])?.mechanic?.state?.filled === true), "六格全摆满");
+ok(st(P[0])?.mechanic?.complete === false, "摆满但摆错 → 不算完成（拼图必须拼对）");
+
+P[0].send({ type: "mechanic.action", mechanicId: "timeline_puzzle", payload: { op: "check" } });
+ok(await waitFor(() => st(P[0])?.mechanic?.state?.lastCorrect !== null), "校对有结果");
+ok(st(P[0])?.mechanic?.state?.lastCorrect === 0, "全摆错时校对回报 0 个正确");
+ok(JSON.stringify(st(P[0])?.mechanic?.state).indexOf("solution") === -1, "投影里不含答案字段");
+
+// 再按真实时序摆好：P1→格2、格5；P2→格3、格6；P3→格1、格4（下标 0 起）
+for (let i = 0; i < 3; i++) for (const s of wrong["P" + (i + 1)]) await take(i, s);
 const right = { P1: [1, 4], P2: [2, 5], P3: [0, 3] };
-for (let i = 0; i < 3; i++) {
-  const slots = right["P" + (i + 1)];
-  for (let k = 0; k < 2; k++) {
-    P[i].send({ type: "mechanic.action", mechanicId: "timeline_puzzle",
-                payload: { op: "place", fragId: frags[i][k].fragId, slot: slots[k] } });
-    await wait(160);
-  }
-}
-ok(await waitFor(() => st(P[0])?.mechanic?.complete === true), "六枚碎片拼满 → 机制完成");
-ok(await waitFor(() => st(P[0])?.mechanic?.state?.ordered === true), "按真实时序摆好 → 判定顺序正确");
+for (let i = 0; i < 3; i++) for (let k = 0; k < 2; k++) await place(i, k, right["P" + (i + 1)][k]);
+ok(await waitFor(() => st(P[0])?.mechanic?.complete === true), "按真实时序摆好 → 机制完成");
 
 // ---------- 投票：2:1 应命中多数决分支，而不是笼统的「分歧」 ----------
 const v = st(P[0])?.vote;

@@ -55,7 +55,8 @@ function validate(id) {
       if (!a.scriptKeys?.[cid]) bad(id, `${tag} 缺少角色 ${cid} 的 scriptKeys`);
     }
     if (!a.openingNarrationKey) bad(id, `${tag} 缺少开场播报`);
-    if (!a.closingNarrationKey) bad(id, `${tag} 缺少收束播报`);
+    // 最后一幕可以没有收束播报（直接进结算），中间幕缺了就是断档
+    if (!a.closingNarrationKey && i < (sk.acts.length - 1)) bad(id, `${tag} 缺少收束播报`);
     if (!a.advance?.type) bad(id, `${tag} 缺少 advance.type`);
     const quota = a.searchQuota?.perSeat ?? 0;
     if (quota > 0) {
@@ -90,20 +91,31 @@ function validate(id) {
     if (!["single_public", "single_anonymous", "ranked", "multi"].includes(v.mode))
       bad(id, `投票 ${v.id} 的 mode 非法: ${v.mode}`);
     if (!v.options?.length) bad(id, `投票 ${v.id} 没有选项`);
-    if (!v.resultBranches?.some((b) => b.match === "split"))
-      bad(id, `投票 ${v.id} 缺少兜底的 split 分支（票型不匹配时会没有结算播报）`);
-
-    // 分支名拼错不会报错，只会静静地退回 split——这类问题只有玩到最后才发现
+    // 分支名有两种写法，引擎在 skeleton.ts 的 normalizeBranchMatch 里抹平：
+    //   unanimous_<选项> / majority_<选项> / split
+    //   4-0:sell / 3-1:keep / 2-2（按票数比例，外部剧本包用这种）
+    // 这里跟着认两种，并把比例写法折算成前者再校验。
     const optIds = new Set((v.options || []).map((o) => o.id));
-    for (const b of v.resultBranches || []) {
-      if (b.match === "split") continue;
-      const m = /^(unanimous|majority)_(.+)$/.exec(b.match || "");
-      if (!m) bad(id, `投票 ${v.id} 的分支名 ${b.match} 无法识别（应为 unanimous_<选项> / majority_<选项> / split）`);
-      else if (!optIds.has(m[2])) bad(id, `投票 ${v.id} 的分支 ${b.match} 指向不存在的选项 ${m[2]}`);
+    const norm = (match) => {
+      if (/^(unanimous|majority)_/.test(match) || match === "split") return match;
+      const m = /^(\d+)-(\d+)(?::(.+))?$/.exec(match || "");
+      if (!m) return null;
+      const [top, rest, opt] = [Number(m[1]), Number(m[2]), m[3]];
+      if (!opt || top === rest) return "split";
+      return rest === 0 ? `unanimous_${opt}` : `majority_${opt}`;
+    };
+    const normed = (v.resultBranches || []).map((b) => norm(b.match));
+    if (!normed.includes("split"))
+      bad(id, `投票 ${v.id} 缺少兜底的平局分支（票型不匹配时会没有结算播报）`);
+    for (let i = 0; i < (v.resultBranches || []).length; i++) {
+      const raw = v.resultBranches[i].match, n = normed[i];
+      if (!n) { bad(id, `投票 ${v.id} 的分支名 ${raw} 无法识别（应为 unanimous_<选项> / majority_<选项> / split，或 4-0:选项 这类比例写法）`); continue; }
+      const m = /^(unanimous|majority)_(.+)$/.exec(n);
+      if (m && !optIds.has(m[2])) bad(id, `投票 ${v.id} 的分支 ${raw} 指向不存在的选项 ${m[2]}`);
     }
     // 选项多于两个时，2:1 / 3:2 这类结果很常见，只有 split 兜底会让大多数局撞到同一个结尾
-    if ((v.options || []).length > 2 && !v.resultBranches?.some((b) => b.match.startsWith("majority_")))
-      warn(id, `投票 ${v.id} 有 ${v.options.length} 个选项却没写 majority_* 分支，多数决的局会全部落到 split`);
+    if ((v.options || []).length > 2 && !normed.some((b) => b && b.startsWith("majority_")))
+      warn(id, `投票 ${v.id} 有 ${v.options.length} 个选项却没写多数决分支，多数决的局会全部落到平局结尾`);
   }
 
   // 机制声明
@@ -120,21 +132,37 @@ function validate(id) {
   if (pack) {
     const keys = new Set();
     const add = (k) => k && keys.add(k);
-    add(sk.meta?.titleKey);
-    for (const c of sk.characters || []) { add(c.nameKey); add(c.briefKey); }
+    /** 递归收字段名以 Key 结尾的字符串。机制参数结构自由，只能这么捞 */
+    const addDeep = (node) => {
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node)) return node.forEach(addDeep);
+      for (const [k, v] of Object.entries(node)) {
+        if (typeof v === "string" && k.endsWith("Key")) add(v);
+        else addDeep(v);
+      }
+    };
+
+    add(sk.meta?.titleKey); add(sk.meta?.subtitleKey); add(sk.meta?.blurbKey);
+    add(sk.meta?.introNarrationKey);
+    for (const c of sk.characters || []) { add(c.nameKey); add(c.briefKey); add(c.tagsKey); }
+    for (const l of sk.locations || []) { add(l.nameKey); add(l.descKey); }
     for (const a of sk.acts || []) {
-      add(a.openingNarrationKey); add(a.closingNarrationKey);
+      add(a.titleKey); add(a.openingNarrationKey); add(a.closingNarrationKey);
       Object.values(a.scriptKeys || {}).forEach(add);
-      (a.locations || []).forEach(add);
+      // 顶层有 locations 表时，act.locations 是 id 而不是文案 key
+      if (!sk.locations?.length) (a.locations || []).forEach(add);
       (a.hints || []).forEach((h) => add(h.narrationKey));
     }
-    for (const c of sk.clues || []) add(c.contentKey);
+    for (const c of sk.clues || []) { add(c.titleKey); add(c.contentKey); }
     for (const v of sk.votes || []) {
       add(v.promptKey);
       (v.options || []).forEach((o) => add(o.labelKey));
       (v.resultBranches || []).forEach((b) => add(b.narrationKey));
     }
-    for (const s of sk.debrief?.segments || []) add(s.contentKey);
+    // 机制参数：碎片全文/摘要、槽位标签、分阶段提示、完成播报……全都在里面
+    for (const m of sk.mechanics || []) addDeep(m.params);
+    for (const s of sk.debrief?.segments || []) { add(s.titleKey); add(s.contentKey); }
+    add(sk.debrief?.epilogueKey);
 
     const missing = [...keys].filter((k) => !(k in pack));
     if (missing.length) bad(id, `文案包缺少 ${missing.length} 个 key：${missing.slice(0, 8).join(", ")}${missing.length > 8 ? " …" : ""}`);

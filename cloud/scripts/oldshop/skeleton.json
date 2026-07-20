@@ -405,6 +405,17 @@
             "slot": 3,
             "label": "我照常六点十分来开门，门是从里面反锁的——三十年来第一次。我敲了很久没人应，最后用自己那把钥匙开的门。他伏在柜台上，手里还攥着粉笔。"
           }
+        ],
+        "hints": [
+          {
+            "afterAttempts": 3,
+            "narrationKey": "nar.act3.assist1"
+          },
+          {
+            "afterMin": 20,
+            "narrationKey": "nar.act3.assist2",
+            "effect": "lock_one_correct"
+          }
         ]
       }
     }

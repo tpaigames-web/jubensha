@@ -11,7 +11,7 @@
  *   4. phase !== debrief 时，复盘 key 一律不下发
  */
 
-import { ClueDef, Skeleton } from "./skeleton";
+import { ClueDef, clueAudience, isGranted, Skeleton } from "./skeleton";
 import { Phase } from "./types";
 
 export interface VisibilityCtx {
@@ -24,6 +24,8 @@ export interface VisibilityCtx {
   unlockedClueIds: string[];
   /** 已解锁的复盘段 id */
   debriefUnlocked: string[];
+  /** 已完成的机制 id。有机制把守的投票，完成前连问题带选项都不下发 */
+  completedMechanics?: string[];
 }
 
 /** 已开放到第几幕（含）。lobby 未开放任何幕正文 */
@@ -39,7 +41,7 @@ export function unlockedActCount(ctx: VisibilityCtx): number {
 export function clueVisibleToCharacter(clue: ClueDef, characterId: string | null): boolean {
   if (clue.visibility.type === "public") return true;
   if (!characterId) return false;
-  return (clue.visibility.characters ?? []).includes(characterId);
+  return clueAudience(clue).includes(characterId);
 }
 
 /** 线索所属幕是否已开放 */
@@ -83,6 +85,7 @@ export function searchCandidates(
     (c) =>
       c.act === act.id &&
       c.location === location &&
+      !isGranted(c) &&                 // 开幕自动下发的不进搜证池，否则会白占一次配额
       !ctx.unlockedClueIds.includes(c.id) &&
       clueVisibleToCharacter(c, ctx.characterId)
   );
@@ -107,15 +110,27 @@ export function availableLocations(sk: Skeleton, ctx: VisibilityCtx): string[] {
 export function entitledKeys(sk: Skeleton, ctx: VisibilityCtx): Set<string> {
   const keys = new Set<string>();
 
-  // 公开信息：标题、角色公开名与简介、地点名
+  // 公开信息：标题、副标题、简介、角色公开名与简介、地点名
   keys.add(sk.meta.titleKey);
+  if (sk.meta.subtitleKey) keys.add(sk.meta.subtitleKey);
+  if (sk.meta.blurbKey) keys.add(sk.meta.blurbKey);
   for (const c of sk.characters) {
     keys.add(c.nameKey);
     keys.add(c.briefKey);
+    if (c.tagsKey) keys.add(c.tagsKey);
   }
   const actCount = unlockedActCount(ctx);
+  const locName = new Map((sk.locations ?? []).map((l) => [l.id, l]));
   for (let i = 0; i < Math.min(actCount, sk.acts.length); i++) {
-    for (const loc of sk.acts[i].locations) keys.add(loc);
+    const act = sk.acts[i];
+    if (act.titleKey) keys.add(act.titleKey);
+    for (const loc of act.locations) {
+      // 简写剧本里 location 本身就是文案 key；全写剧本另有 name/desc 两个 key
+      const def = locName.get(loc);
+      if (def?.nameKey) keys.add(def.nameKey);
+      if (def?.descKey) keys.add(def.descKey);
+      if (!def) keys.add(loc);
+    }
   }
 
   // 自己的剧本正文：仅已开放的幕，且仅自己的角色
@@ -126,22 +141,35 @@ export function entitledKeys(sk: Skeleton, ctx: VisibilityCtx): Set<string> {
     }
   }
 
-  // 线索：过三元组校验的才给
-  for (const c of visibleClues(sk, ctx)) keys.add(c.contentKey);
-
-  // 投票：所属幕已开放才给问题与选项
-  for (const v of sk.votes) {
-    const idx = sk.acts.findIndex((a) => a.id === v.act);
-    if (idx >= 0 && idx < actCount) {
-      keys.add(v.promptKey);
-      for (const o of v.options) keys.add(o.labelKey);
-    }
+  // 线索：过三元组校验的才给（标题与正文一起，标题也算正文）
+  for (const c of visibleClues(sk, ctx)) {
+    keys.add(c.contentKey);
+    if (c.titleKey) keys.add(c.titleKey);
   }
 
-  // 复盘：仅 debrief 阶段，且仅已解锁的段
+  // 投票：所属幕已开放才给问题与选项；被机制把守的，机制没完成就一个字都不给
+  const done = new Set(ctx.completedMechanics ?? []);
+  for (const v of sk.votes) {
+    const idx = sk.acts.findIndex((a) => a.id === v.act);
+    if (idx < 0 || idx >= actCount) continue;
+    const gate = sk.mechanics.find(
+      (m) => (m.params?.onComplete as { openVote?: string } | undefined)?.openVote === v.id
+    );
+    if (gate && !done.has(gate.id)) continue;
+    keys.add(v.promptKey);
+    for (const o of v.options) keys.add(o.labelKey);
+  }
+
+  // 复盘：仅 debrief 阶段，且仅已解锁的段。尾声压到最后一段解锁之后
   if (ctx.phase === "debrief" || ctx.phase === "ended") {
     for (const seg of sk.debrief.segments) {
-      if (ctx.debriefUnlocked.includes(seg.id)) keys.add(seg.contentKey);
+      if (!ctx.debriefUnlocked.includes(seg.id)) continue;
+      keys.add(seg.contentKey);
+      if (seg.titleKey) keys.add(seg.titleKey);
+    }
+    const last = sk.debrief.segments[sk.debrief.segments.length - 1];
+    if (sk.debrief.epilogueKey && last && ctx.debriefUnlocked.includes(last.id)) {
+      keys.add(sk.debrief.epilogueKey);
     }
   }
 

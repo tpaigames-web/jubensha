@@ -532,41 +532,81 @@ function bindVote() {
 }
 
 // --- 机制：时间线拖拽（Pointer Events，手机可用） ---
+/** 碎片正文：自己的给全文，别人的只有一行摘要——服务端已按席位投影，这里只负责显示 */
+function fragText(f) {
+  const st = S.st || {};
+  return (f.textKey && (st.content || {})[f.textKey]) || f.label || "（无内容）";
+}
+function fragBox(f, cls) {
+  const decoy = f.revealedDecoy ? '<span class="tag warn">已确认是干扰项</span>' : "";
+  const who = f.summaryOnly ? '<span class="tag">别人的·只有摘要</span>' : "";
+  return `<div class="${cls}" data-frag="${esc(f.fragId)}">
+    <div class="frag-meta">${who}${decoy}</div>${esc(fragText(f))}</div>`;
+}
+
 function renderMechanic(m) {
   const s = m.state || {};
-  const labels = s.slotLabels || [];
-  const slots = (s.slots || []).map((x, i) => {
-    const tag = labels[i] ? `<span class="slot-t">${esc(labels[i])}</span>` : "";
-    const body = x
-      ? `${esc(x.label)}${x.byMe ? ' <span class="tag" style="margin-left:6px">我放的·点击取回</span>' : ""}`
-      : `<span class="hint">${labels[i] ? "还没人放" : `第 ${i + 1} 格（空）`}</span>`;
-    return `<div class="slot ${x ? "filled" : ""}" data-slot="${i}">${tag}${body}</div>`;
+  const st = S.st || {};
+  const key = (k) => (k ? (st.content || {})[k] : null);
+
+  const slots = (s.slots || []).map((sl, i) => {
+    const label = key(sl.labelKey) || sl.label;
+    const tag = label ? `<span class="slot-t">${esc(label)}</span>` : "";
+    const lock = sl.locked ? '<span class="tag ok">已确认</span>' : "";
+    const body = sl.frag
+      ? `${lock}${esc(fragText(sl.frag))}`
+      : `<span class="hint">${label ? "还没人放" : `第 ${i + 1} 格（空）`}</span>`;
+    return `<div class="slot ${sl.frag ? "filled" : ""} ${sl.locked ? "locked" : ""}"
+                 data-slot="${esc(sl.slotId)}">${tag}${body}</div>`;
   }).join("");
-  const frags = (s.myFragments || []).map((f) => `<div class="frag" data-frag="${esc(f.fragId)}">${esc(f.label)}</div>`).join("");
+
+  const mine = (s.myFragments || []).map((f) => fragBox(f, "frag")).join("");
+  const dumped = (s.discarded || []).map((f) => fragBox(f, "frag out")).join("");
+
+  // 校对：只回报「对了几个」，不说是哪几个
+  const cd = s.nextCheckAt && s.nextCheckAt > serverNow()
+    ? Math.ceil((s.nextCheckAt - serverNow()) / 1000) : 0;
+  let status;
+  if (m.complete) status = "✅ 拼对了，这就是那一天。";
+  else if (!s.filled) status = `还剩 ${(s.emptySlots || []).length} 格 · 其他人手上还有 ${s.othersHolding ?? 0} 枚`;
+  else if (s.lastCorrect === null || s.lastCorrect === undefined) status = "都摆上了，可以校对一次";
+  else status = `上次校对：${s.lastCorrect} / ${s.needCorrect} 个在正确位置（不会告诉你是哪几个）`;
+
   return `<div class="card" id="mech-box" data-mid="${esc(m.mechanicId)}">
     <h2>🧩 时间线拼合</h2>
-    <p class="hint" style="margin-bottom:8px">
-      ${!m.complete
-        ? `还剩 ${(s.emptySlots || []).length} 格 · 其他人手上还有 ${s.othersHolding ?? 0} 枚`
-        : s.ordered === false
-          ? "⚠️ 拼满了，但顺序还不对。点自己放的那一格可以取回重放。"
-          : s.ordered === true ? "✅ 顺序正确，这就是那几天的样子。" : "✅ 已拼合完整"}
-    </p>
+    <p class="hint" style="margin-bottom:8px">${status}</p>
     <div class="timeline">${slots}</div>
     <div style="margin-top:12px">
-      <div class="hint" style="margin-bottom:6px">我的碎片（拖到格子里，或点一下再点格子）</div>
-      <div class="row" style="flex-wrap:wrap">${frags || '<span class="hint">已全部放置</span>'}</div>
+      <div class="hint" style="margin-bottom:6px">
+        我的碎片（拖到格子里，或点一下再点格子）。<b>别人只看得到你这段的一行摘要——细节要你自己念出来。</b>
+      </div>
+      <div class="fraglist">${mine || '<span class="hint">已全部放置</span>'}</div>
     </div>
+    ${s.discardEnabled ? `<div style="margin-top:12px">
+      <div class="hint" style="margin-bottom:6px">${esc(key(s.discardLabelKey) || "弃置区（放不进时间线的那一段）")}</div>
+      <div class="fraglist" id="mech-discard">${dumped || '<span class="hint">空</span>'}</div>
+    </div>` : ""}
+    ${!m.complete && s.graded ? `<div class="row" style="margin-top:12px">
+      <button class="btn" id="mech-check" ${cd ? "disabled" : ""}>
+        ${cd ? `校对（${cd}s 后可用）` : "🔍 校对一次"}</button>
+    </div>` : ""}
   </div>`;
 }
 
 let pickedFrag = null;
+const hitsEl = (el, ev) => {
+  const r = el.getBoundingClientRect();
+  return ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+};
 function bindMechanic() {
   const box = $("mech-box"); if (!box) return;
   const mid = box.dataset.mid;
   const ghost = $("drag-ghost");
+  const dropZone = $("mech-discard");
 
   const act = (payload) => send({ type: "mechanic.action", mechanicId: mid, payload });
+  const chk = $("mech-check");
+  if (chk) chk.onclick = () => act({ op: "check" });
 
   // 点击式（无障碍 & 兜底）
   box.querySelectorAll("[data-frag]").forEach((el) => {
@@ -602,7 +642,10 @@ function bindMechanic() {
           sl.classList.remove("hover");
         });
         if (target && !target.classList.contains("filled")) {
-          act({ op: "place", fragId, slot: Number(target.dataset.slot) });
+          act({ op: "place", fragId, slot: target.dataset.slot });
+          pickedFrag = null;
+        } else if (dropZone && hitsEl(dropZone, ev)) {
+          act({ op: "discard", fragId });
           pickedFrag = null;
         }
       };
@@ -613,12 +656,23 @@ function bindMechanic() {
 
   box.querySelectorAll("[data-slot]").forEach((el) => {
     el.onclick = () => {
-      const slot = Number(el.dataset.slot);
+      const slot = el.dataset.slot;
+      if (el.classList.contains("locked")) return toast("这一格已经确认过了");
       if (el.classList.contains("filled")) { act({ op: "take", slot }); return; }
       if (pickedFrag) { act({ op: "place", fragId: pickedFrag, slot }); pickedFrag = null; }
       else toast("先点一枚自己的碎片");
     };
   });
+
+  // 弃置区：点一下把选中的碎片丢进去；已在里面的点一下拿回来
+  if (dropZone) {
+    dropZone.onclick = (e) => {
+      const on = e.target.closest("[data-frag]");
+      if (on) return act({ op: "undiscard", fragId: on.dataset.frag });
+      if (pickedFrag) { act({ op: "discard", fragId: pickedFrag }); pickedFrag = null; }
+      else toast("先点一枚碎片，再点这里把它弃置");
+    };
+  }
 }
 
 // --- 播报：弹层（文字必现，朗读可跳过） ---

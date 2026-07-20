@@ -17,15 +17,33 @@ import {
   ClientMsg, ConnAttachment, ERR, Phase, RoomState, Seat, SeatPublic, SnapshotFull,
 } from "./types";
 import { hashPin, hashToken, newId, newSalt, newSeatToken, timingSafeEqual } from "./crypto";
-import { getSkeleton, hasSkeleton, Skeleton } from "./skeleton";
+import { getSkeleton, hasSkeleton, isGranted, Skeleton } from "./skeleton";
 import { getContent } from "./content";
 import { availableLocations, entitledKeys, searchCandidates, visibleClues, VisibilityCtx } from "./visibility";
 import { getMechanic } from "./mechanics";
+import { lockOneCorrect, revealDecoy, TimelineState } from "./mechanics/timeline_puzzle";
 
 const K_ROOM = "room";
 const K_SEATS = "seats";
 
 type SeatMap = Record<string, Seat>;
+
+/**
+ * 从机制投影里挑出所有 content key（字段名以 Key 结尾的字符串）。
+ * 机制自己决定投给谁哪一个 key，这里只负责把它们解析成正文。
+ */
+function collectKeys(node: unknown, out = new Set<string>()): Set<string> {
+  if (!node || typeof node !== "object") return out;
+  if (Array.isArray(node)) {
+    for (const v of node) collectKeys(v, out);
+    return out;
+  }
+  for (const [k, v] of Object.entries(node)) {
+    if (typeof v === "string" && k.endsWith("Key")) out.add(v);
+    else collectKeys(v, out);
+  }
+  return out;
+}
 
 export class RoomDO implements DurableObject {
   private ctx: DurableObjectState;
@@ -148,6 +166,12 @@ export class RoomDO implements DurableObject {
       characterId: seat.characterId,
       unlockedClueIds: room.unlockedClues.map((u) => u.clueId),
       debriefUnlocked: room.debriefUnlocked,
+      completedMechanics: Object.entries(room.mechanics)
+        .filter(([mid, s]) => {
+          const impl = getMechanic(mid);
+          return !!impl && s !== undefined && impl.isComplete(s);
+        })
+        .map(([mid]) => mid),
     };
   }
 
@@ -175,6 +199,7 @@ export class RoomDO implements DurableObject {
     const act = room.actIndex >= 0 ? sk.acts[room.actIndex] : null;
     const myClues = visibleClues(sk, vctx).map((c) => ({
       id: c.id,
+      titleKey: c.titleKey,
       contentKey: c.contentKey,
       location: c.location,
       private: c.visibility.type === "private",
@@ -184,6 +209,18 @@ export class RoomDO implements DurableObject {
     const narration = room.narrationLog
       .filter((n) => allowed.has(n.key) || n.key.startsWith("nar.") || n.key.startsWith("end."))
       .map((n) => ({ key: n.key, at: n.at, text: getContent(room.scriptId).resolve(n.key) ?? "" }));
+
+    const mechanic = this.mechanicView(room, sk, me);
+    // 机制投影里出现的 content key 才解析。投影本身就是该机制的可见性闸门
+    // （比如时间线：自己的碎片给全文 key，别人的只给摘要 key），
+    // 所以这里照单解析是安全的——越权的 key 根本不会出现在投影里。
+    if (mechanic) {
+      const src = getContent(room.scriptId);
+      for (const k of collectKeys(mechanic.state)) {
+        const t = src.resolve(k);
+        if (t !== null && t !== undefined) content[k] = t;
+      }
+    }
 
     const snap: SnapshotFull = {
       type: "snapshot.full",
@@ -226,7 +263,7 @@ export class RoomDO implements DurableObject {
       },
       clues: myClues,
       vote: this.voteView(room, sk, me, Object.keys(seats).length),
-      mechanic: this.mechanicView(room, sk, me),
+      mechanic,
       debrief:
         room.phase === "debrief" || room.phase === "ended"
           ? sk.debrief.segments
@@ -246,6 +283,13 @@ export class RoomDO implements DurableObject {
     if (!act) return null;
     const v = sk.votes.find((x) => x.act === act.id);
     if (!v) return null;
+    // 有机制把守的投票，拼完之前不露面——连问题带选项都不下发
+    const gate = this.voteGatedBy(sk, v.id);
+    if (gate) {
+      const impl = getMechanic(gate);
+      const st = room.mechanics[gate];
+      if (!impl || st === undefined || !impl.isComplete(st)) return null;
+    }
     const ballots = room.votes[v.id] ?? {};
 
     // 匿名模式只回统计，不回「谁投了什么」
@@ -297,6 +341,85 @@ export class RoomDO implements DurableObject {
       state: impl.projectFor(st, me.seatId),
       complete: impl.isComplete(st),
     };
+  }
+
+  /**
+   * 开幕自动下发的线索（grant: on_act_start）。
+   * 这类线索没有地点、不进搜证池，开幕就直接进对应席位的背包——
+   * 可见性仍由 entitledKeys 裁决，这里只负责把它标记为「已解锁」。
+   */
+  private grantActStartClues(room: RoomState, sk: Skeleton, actId: string): void {
+    for (const c of sk.clues) {
+      if (c.act !== actId || !isGranted(c)) continue;
+      if (room.unlockedClues.some((u) => u.clueId === c.id)) continue;
+      room.unlockedClues.push({ clueId: c.id, bySeatId: "", at: Date.now() });
+    }
+  }
+
+  /**
+   * 机制自带的分阶段提示（在 mechanics[].params.hints 里，与幕的 hints 分开）。
+   * 支持按经过时间（afterMin）和按校对次数（afterAttempts）两种触发，
+   * 并可带效果：锁定一个已摆对的格子 / 点破干扰项。
+   */
+  private fireMechanicHints(room: RoomState, sk: Skeleton, mid: string, now: number): void {
+    const decl = sk.mechanics.find((m) => m.id === mid);
+    const hints = Array.isArray(decl?.params?.hints)
+      ? (decl!.params.hints as { afterMin?: number; afterAttempts?: number; narrationKey: string; effect?: string }[])
+      : [];
+    if (!hints.length) return;
+
+    const st = room.mechanics[mid] as { checks?: number } | undefined;
+    const attempts = Number(st?.checks ?? 0);
+    const elapsedMin = room.actStartedAt ? (now - room.actStartedAt) / 60_000 : 0;
+
+    for (const h of hints) {
+      if (room.hintsFired.includes(h.narrationKey)) continue;
+      const byTime = h.afterMin !== undefined && elapsedMin >= h.afterMin;
+      const byTries = h.afterAttempts !== undefined && attempts >= h.afterAttempts;
+      if (!byTime && !byTries) continue;
+
+      room.hintsFired.push(h.narrationKey);
+      if (h.effect === "lock_one_correct") {
+        room.mechanics[mid] = lockOneCorrect(room.mechanics[mid] as TimelineState);
+      } else if (h.effect === "reveal_decoy") {
+        room.mechanics[mid] = revealDecoy(room.mechanics[mid] as TimelineState);
+      }
+      this.pushNarration(room, h.narrationKey, "hint");
+    }
+  }
+
+  /** 同步版播报：记入回放日志并广播。narrate 的同步形态，供非 async 路径调用 */
+  private pushNarration(room: RoomState, key: string, style: string): void {
+    const text = getContent(room.scriptId).resolve(key);
+    if (text === null || text === undefined) return;
+    room.narrationLog.push({ key, at: Date.now() });
+    this.broadcast({ type: "narration", key, text, style, serverNow: Date.now() });
+  }
+
+  /** 机制刚刚完成：放揭示播报、解锁它挂的线索、开放它把守的投票 */
+  private onMechanicComplete(room: RoomState, sk: Skeleton, mid: string): void {
+    const oc = sk.mechanics.find((m) => m.id === mid)?.params?.onComplete as
+      | { narrationKey?: string; unlockClues?: string[] }
+      | undefined;
+    if (!oc) return;
+    for (const id of oc.unlockClues ?? []) {
+      if (!sk.clues.some((c) => c.id === id)) continue;
+      if (room.unlockedClues.some((u) => u.clueId === id)) continue;
+      room.unlockedClues.push({ clueId: id, bySeatId: "", at: Date.now() });
+    }
+    if (oc.narrationKey && !room.hintsFired.includes(oc.narrationKey)) {
+      room.hintsFired.push(oc.narrationKey);
+      this.pushNarration(room, oc.narrationKey, "reveal");
+    }
+  }
+
+  /** 该机制是否把守着某个投票（拼完之前不开票） */
+  private voteGatedBy(sk: Skeleton, voteId: string): string | null {
+    for (const m of sk.mechanics) {
+      const oc = m.params?.onComplete as { openVote?: string } | undefined;
+      if (oc?.openVote === voteId) return m.id;
+    }
+    return null;
   }
 
   /** 进入某幕时初始化该幕声明的机制 */
@@ -362,11 +485,21 @@ export class RoomDO implements DurableObject {
       await this.ctx.storage.deleteAlarm();
       return;
     }
-    const act = this.sk(room).acts[room.actIndex];
+    const sk = this.sk(room);
+    const act = sk.acts[room.actIndex];
     const times: number[] = [];
     for (const h of act.hints) {
       const at = room.actStartedAt + h.afterMin * 60_000;
       if (!room.hintsFired.includes(h.narrationKey) && at > Date.now()) times.push(at);
+    }
+    // 机制自带的定时提示也要唤醒 DO，否则休眠期间永远不会放
+    for (const mid of act.mechanics ?? []) {
+      const hints = sk.mechanics.find((m) => m.id === mid)?.params?.hints;
+      for (const h of Array.isArray(hints) ? (hints as { afterMin?: number; narrationKey: string }[]) : []) {
+        if (h.afterMin === undefined || room.hintsFired.includes(h.narrationKey)) continue;
+        const at = room.actStartedAt + h.afterMin * 60_000;
+        if (at > Date.now()) times.push(at);
+      }
     }
     if (room.actEndsAt && room.actEndsAt > Date.now()) times.push(room.actEndsAt);
     if (!times.length) {
@@ -392,6 +525,8 @@ export class RoomDO implements DurableObject {
         await this.narrate(room, h.narrationKey, "hint");
       }
     }
+    // 机制自带的定时提示（可能带锁定/点破效果）
+    for (const mid of act.mechanics ?? []) this.fireMechanicHints(room, this.sk(room), mid, now);
 
     // 幕超时
     if (room.actEndsAt && now >= room.actEndsAt && act.advance.type !== "all_ready") {
@@ -479,6 +614,7 @@ export class RoomDO implements DurableObject {
       s.searchUsed = { ...(s.searchUsed ?? {}), [index]: 0 };
     }
     this.initMechanics(room, sk, seats, index);
+    this.grantActStartClues(room, sk, act.id);
     await this.putSeats(seats);
     await this.narrate(room, act.openingNarrationKey, "act-open");
     await this.putRoom(room);
@@ -504,7 +640,8 @@ export class RoomDO implements DurableObject {
     if (room.phase !== "playing") return;
 
     const act = sk.acts[room.actIndex];
-    await this.narrate(room, act.closingNarrationKey, "act-close");
+    // 最后一幕可以不写收束播报（外部包的 act3 就是 null），直接进结算
+    if (act.closingNarrationKey) await this.narrate(room, act.closingNarrationKey, "act-close");
 
     if (room.actIndex + 1 < sk.acts.length) {
       await this.enterAct(room, seats, room.actIndex + 1);
@@ -886,6 +1023,7 @@ export class RoomDO implements DurableObject {
           const st = room.mechanics[mid];
           if (st === undefined) return "机制未初始化";
 
+          const wasDone = impl.isComplete(st);
           const res = impl.onAction(st, seat.seatId, msg.payload);
           if (res.reject) return res.reject;
           room.mechanics[mid] = res.nextState;
@@ -894,6 +1032,12 @@ export class RoomDO implements DurableObject {
           for (const ev of res.events) {
             if (ev.toSeatId) this.sendToSeat(ev.toSeatId, { type: "mechanic.event", mechanicId: mid, ...ev });
             else this.broadcast({ type: "mechanic.event", mechanicId: mid, ...ev });
+          }
+
+          // 校对次数到了就放对应提示；刚拼完则触发 onComplete
+          this.fireMechanicHints(room, sk, mid, Date.now());
+          if (!wasDone && impl.isComplete(room.mechanics[mid])) {
+            this.onMechanicComplete(room, sk, mid);
           }
         });
 

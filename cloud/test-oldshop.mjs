@@ -137,8 +137,8 @@ ok(await readyAll(P, 2), "全员就绪 → 进入第三幕");
 const m0 = st(P[0])?.mechanic;
 ok(m0?.mechanicId === "timeline_puzzle", "第三幕加载时间线拼图");
 ok(m0?.state?.slots?.length === 4, "时间线 4 格");
-ok((m0?.state?.slotLabels || []).length === 4, "每格带时间提示");
-ok((m0?.state?.slotLabels || []).some((x) => x.includes("周四")), "时间提示是真实时间点，非占位");
+ok((m0?.state?.slots || []).every((s) => s.label), "每格带时间提示");
+ok((m0?.state?.slots || []).some((s) => String(s.label).includes("周四")), "时间提示是真实时间点，非占位");
 
 // 四端都拿到第三幕机制投影再读碎片：只等 P[0] 的话，生产抖动下其余三端
 // 还停在第二幕（mechanic 为 null，myFragments 是空数组），断言会假摔。
@@ -151,15 +151,15 @@ ok(frags[0][0].label !== frags[1][0].label, "碎片按角色分发");
 const outsider = P[1].allRaw();
 ok(!outsider.includes(frags[0][0].label), "别人手上未打出的碎片：全文搜索零命中");
 
-// 故意放错顺序：验证「错了也能推进」，再纠正过来验证判定
+// 先故意摆错：摆满不等于完成，拼图必须拼对
 const wrongSlot = [3, 2, 1, 0];
 for (let i = 0; i < 4; i++) {
   P[i].send({ type: "mechanic.action", mechanicId: "timeline_puzzle", payload: { op: "place", fragId: frags[i][0].fragId, slot: wrongSlot[i] } });
   await wait(180);
 }
-ok(await waitFor(() => st(P[0])?.mechanic?.complete === true), "四枚碎片拼满 → 机制完成");
-ok(st(P[0])?.mechanic?.state?.ordered === false, "顺序不对时如实提示，但仍算完成（不卡幕）");
-ok(await waitFor(() => (st(P[1])?.mechanic?.state?.slots || []).every((x) => x && x.label)),
+ok(await waitFor(() => st(P[0])?.mechanic?.state?.filled === true), "四格全摆满");
+ok(st(P[0])?.mechanic?.complete === false, "摆满但摆错 → 不算完成");
+ok(await waitFor(() => (st(P[1])?.mechanic?.state?.slots || []).every((s) => s.frag)),
    "拼上后全场可见");
 
 for (let i = 0; i < 4; i++) {
@@ -172,7 +172,7 @@ for (let i = 0; i < 4; i++) {
   P[i].send({ type: "mechanic.action", mechanicId: "timeline_puzzle", payload: { op: "place", fragId: frags[i][0].fragId, slot: rightSlot[i] } });
   await wait(140);
 }
-ok(await waitFor(() => st(P[0])?.mechanic?.state?.ordered === true), "按真实时序摆好 → 判定顺序正确");
+ok(await waitFor(() => st(P[0])?.mechanic?.complete === true), "按真实时序摆好 → 机制完成");
 
 const v = st(P[0])?.vote;
 ok(v?.voteId === "vote.final", "第三幕开放最终投票");

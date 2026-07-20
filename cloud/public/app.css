@@ -105,6 +105,12 @@ input:focus { border-color:#d9b45b; }
 }
 .slot.filled { border-style:solid; border-color:#d9b45b; background:#26221580; color:#e8e6df; }
 .slot.hover { border-color:#5ecfda; background:#12262a; }
+.slot.locked { border-color:#4f9d69; background:#13251a; }
+/* 碎片是整段回忆，不是标签——竖排、左对齐、可换行 */
+.fraglist { display:flex; flex-direction:column; gap:10px; }
+.frag-meta { display:flex; gap:6px; margin-bottom:6px; }
+.frag-meta:empty { display:none; }
+.frag.out { opacity:.6; background:linear-gradient(135deg,#6b6b6b,#4a4a4a); color:#e8e6df; }
 /* 时间提示：空格也显示，玩家据此判断该放哪一段 */
 .slot-t {
   flex:0 0 auto; align-self:stretch; display:flex; align-items:center;
@@ -112,9 +118,9 @@ input:focus { border-color:#d9b45b; }
   font-size:12px; font-weight:700; color:#d9b45b;
 }
 .frag {
-  background:linear-gradient(135deg,#d9b45b,#c1922f); color:#1b1405; font-weight:700;
+  background:linear-gradient(135deg,#d9b45b,#c1922f); color:#1b1405; font-weight:600;
   border-radius:10px; padding:12px 14px; min-height:48px; width:100%;
-  display:flex; align-items:center; line-height:1.55;
+  display:block; line-height:1.6; text-align:left;
   cursor:grab; touch-action:none; user-select:none;
 }
 .frag.dragging { opacity:.5; }
