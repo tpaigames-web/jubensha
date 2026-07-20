@@ -21,6 +21,8 @@ const S = {
   tab: "script",
   narration: [],
   seen: { clue: 0, dm: 0, chat: 0 },
+  chatThread: null,        // null=全部(公开)，否则为对方 seatId
+  seenThread: {},          // 每个会话已读到的条数
   connected: false,
   retry: 0,
   sound: true,
@@ -355,9 +357,8 @@ function renderGame() {
     ? `第${st.room.actIndex + 1}幕 / ${st.script.actCount}`
     : phaseName(st.room.phase);
   renderScript(); renderClue(); renderAct(); renderChat(); renderDM(); renderActionBar();
-  // 讨论区未读角标
-  const n = (st.chat || []).length - S.seen.chat;
-  if (S.tab !== "chat" && n > 0) { $("n-chat").textContent = n; $("n-chat").style.display = "inline-block"; }
+  const n = chatUnreadTotal();
+  if (n > 0) { $("n-chat").textContent = n > 99 ? "99+" : n; $("n-chat").style.display = "inline-block"; }
   else $("n-chat").style.display = "none";
   tickTimer();
 }
@@ -639,69 +640,131 @@ function renderChat() {
   if (!$("chat-list")) buildChatPanel();
   updateChatTargets();
   renderChatMessages();
-  if (S.tab === "chat") { S.seen.chat = (st.chat || []).length; $("n-chat").style.display = "none"; }
+}
+
+/** 页签角标：所有会话的未读之和（当前打开的那个不算） */
+function chatUnreadTotal() {
+  const st = S.st; if (!st) return 0;
+  const meId = st.me.seatId;
+  const keys = [null].concat(st.seats.filter((s) => s.seatId !== meId).map((s) => s.seatId));
+  let n = 0;
+  for (const k of keys) {
+    if (S.tab === "chat" && (S.chatThread || null) === k) continue;
+    const total = (st.chat || []).filter((m) => threadOf(m, meId) === k).length;
+    n += Math.max(0, total - (S.seenThread[k ?? "__all__"] || 0));
+  }
+  return n;
 }
 
 function buildChatPanel() {
   $("p-chat").innerHTML = `
     <div class="card">
-      <div class="chat-list" id="chat-list"></div>
-      <div class="chat-bar">
-        <select id="chat-to"></select>
-        <input id="chat-input" class="grow" maxlength="500" placeholder="说点什么…">
-        <button class="btn primary" id="chat-send" style="flex:none">发送</button>
+      <div class="chat-wrap">
+        <div class="chat-threads" id="chat-threads"></div>
+        <div class="chat-main">
+          <div class="chat-hint" id="chat-hint"></div>
+          <div class="chat-list" id="chat-list"></div>
+          <div class="chat-bar">
+            <input id="chat-input" class="grow" maxlength="500" placeholder="说点什么…">
+            <button class="btn primary" id="chat-send" style="flex:none">发送</button>
+          </div>
+        </div>
       </div>
     </div>`;
-  const sel = $("chat-to");
-  sel.onchange = () => { S._chatTo = sel.value; };
   const doSend = () => {
     const el = $("chat-input");
     const v = el.value.trim();
     if (!v) return;
-    send({ type: "chat.send", to: $("chat-to").value || null, text: v });
+    send({ type: "chat.send", to: S.chatThread || null, text: v });
     el.value = "";
   };
   $("chat-send").onclick = doSend;
   $("chat-input").onkeydown = (e) => { if (e.key === "Enter") doSend(); };
 }
 
-/** 席位名单变化时才重建下拉，并保住当前选择 */
+/** 某条消息属于哪个会话：公开→null，私聊→对方的 seatId */
+function threadOf(m, meId) {
+  if (m.to === null) return null;
+  return m.from === meId ? m.to : m.from;
+}
+
+/** 会话列表：全部 + 每个其他玩家一条，带未读数 */
 function updateChatTargets() {
-  const st = S.st, sel = $("chat-to");
+  const st = S.st;
+  const box = $("chat-threads");
   const others = st.seats.filter((s) => s.seatId !== st.me.seatId);
-  const sig = others.map((s) => s.seatId + ":" + s.characterId).join("|");
-  if (sel.dataset.sig === sig) return;
-  sel.dataset.sig = sig;
-  const keep = S._chatTo || sel.value || "";
-  sel.innerHTML = ['<option value="">公开发言（所有人可见）</option>']
+  const msgs = st.chat || [];
+
+  const unread = (key) => {
+    const seen = S.seenThread[key ?? "__all__"] || 0;
+    const total = msgs.filter((m) => threadOf(m, st.me.seatId) === key).length;
+    return Math.max(0, total - seen);
+  };
+
+  const item = (key, title, sub) => {
+    const on = (S.chatThread || null) === key;
+    const n = on ? 0 : unread(key);
+    return `<button class="thread ${on ? "on" : ""}" data-thread="${key === null ? "" : esc(key)}">
+      ${esc(title)}${sub ? `<span class="sub">${esc(sub)}</span>` : ""}
+      ${n > 0 ? `<span class="dot-n">${n > 99 ? "99+" : n}</span>` : ""}
+    </button>`;
+  };
+
+  const html = [item(null, "全部", "所有人可见")]
     .concat(others.map((s) => {
       const cn = st.content[(st.script.characters.find((c) => c.id === s.characterId) || {}).nameKey];
-      return `<option value="${esc(s.seatId)}">🔒 私聊 ${esc(s.displayName)}${cn ? "（" + esc(cn) + "）" : ""}</option>`;
+      return item(s.seatId, "🔒 " + s.displayName, cn || "");
     })).join("");
-  if ([...sel.options].some((o) => o.value === keep)) sel.value = keep;
+
+  if (box.dataset.html !== html) {
+    box.dataset.html = html;
+    box.innerHTML = html;
+    box.querySelectorAll("[data-thread]").forEach((el) => {
+      el.onclick = () => {
+        S.chatThread = el.dataset.thread || null;
+        markThreadSeen();
+        renderChat();
+        $("chat-input")?.focus();
+      };
+    });
+  }
+}
+
+function markThreadSeen() {
+  const st = S.st; if (!st) return;
+  const key = S.chatThread || null;
+  const total = (st.chat || []).filter((m) => threadOf(m, st.me.seatId) === key).length;
+  S.seenThread[key ?? "__all__"] = total;
 }
 
 function renderChatMessages() {
   const st = S.st;
-  const msgs = st.chat || [];
+  const meId = st.me.seatId;
+  const key = S.chatThread || null;
+  const msgs = (st.chat || []).filter((m) => threadOf(m, meId) === key);
+
+  const other = key ? st.seats.find((s) => s.seatId === key) : null;
+  $("chat-hint").textContent = key
+    ? `🔒 与 ${other ? other.displayName : "?"} 的私聊 —— 只有你们两人能看到`
+    : "📢 公开讨论 —— 所有人可见";
+  $("chat-input").placeholder = key ? `私聊 ${other ? other.displayName : ""}…` : "对所有人说…";
+
   const list = msgs.map((m) => {
-    const mine = m.from === st.me.seatId;
-    const pm = m.to !== null;
-    const who = mine ? "我" : m.fromName;
-    const label = pm ? (mine ? `私聊 → ${m.toName}` : `${who} 私聊我`) : who;
-    return `<div class="msg ${mine ? "me" : ""} ${pm ? "pm" : ""}">
-      <div class="meta">${esc(label)} · ${new Date(m.at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</div>
+    const mine = m.from === meId;
+    return `<div class="msg ${mine ? "me" : ""} ${m.to !== null ? "pm" : ""}">
+      <div class="meta">${esc(mine ? "我" : m.fromName)} · ${new Date(m.at).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</div>
       <div style="white-space:pre-wrap">${esc(m.text)}</div>
     </div>`;
   }).join("");
 
   const box = $("chat-list");
-  const html = list || '<p class="hint">还没有人说话。公开发言所有人可见；私聊只有对方能看到。</p>';
-  if (box.dataset.n !== String(msgs.length)) {
-    box.dataset.n = String(msgs.length);
-    box.innerHTML = html;
+  const sig = key + ":" + msgs.length;
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = list || `<p class="hint">${key ? "还没有和 TA 说过话。这里说的只有你们两人看得到。" : "还没有人说话。"}</p>`;
     box.scrollTop = box.scrollHeight;
   }
+  if (S.tab === "chat") markThreadSeen();
 }
 
 // --- 底部操作条 ---
@@ -771,7 +834,7 @@ document.querySelectorAll(".tab").forEach((el) => {
     document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
     $("p-" + S.tab).classList.add("active");
     if (S.tab === "dm") { S.seen.dm = S.narration.length; $("n-dm").style.display = "none"; }
-    if (S.tab === "chat" && S.st) { S.seen.chat = (S.st.chat || []).length; $("n-chat").style.display = "none"; renderChat(); }
+    if (S.tab === "chat" && S.st) { markThreadSeen(); renderChat(); $("n-chat").style.display = "none"; }
     window.scrollTo(0, 0);
   };
 });

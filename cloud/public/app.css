@@ -146,12 +146,30 @@ input:focus { border-color:#d9b45b; }
 .dm-pop-title { color:#d9b45b; font-weight:700; margin-bottom:8px; }
 .dm-pop-text { white-space:pre-wrap; line-height:1.9; }
 
-/* 聊天 */
-.chat-list { display:flex; flex-direction:column; gap:8px; padding-bottom:6px; }
-.msg { max-width:86%; padding:9px 12px; border-radius:12px; background:#22253a; align-self:flex-start; }
+/* 聊天：左边会话列表 · 右边记录 · 下面输入 */
+.chat-wrap { display:flex; gap:8px; height:62vh; min-height:340px; }
+.chat-threads {
+  width:104px; flex:none; display:flex; flex-direction:column; gap:6px;
+  overflow-y:auto; border-right:1px solid #2a2d3f; padding-right:6px;
+}
+.thread {
+  min-height:52px; border:1px solid #33364a; background:#1b1e2b; color:#cfccc0;
+  border-radius:10px; padding:7px 8px; cursor:pointer; text-align:left;
+  font-size:.8em; line-height:1.35; position:relative;
+}
+.thread.on { border-color:#d9b45b; background:#26221580; color:#f0e9d8; font-weight:700; }
+.thread .sub { display:block; font-size:.85em; color:#8b8898; font-weight:400; }
+.thread .dot-n {
+  position:absolute; top:5px; right:5px; background:#c0504e; color:#fff;
+  font-size:.72em; border-radius:9px; padding:0 5px; min-width:16px; text-align:center;
+}
+.chat-main { flex:1; display:flex; flex-direction:column; min-width:0; }
+.chat-list { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:2px 2px 6px; }
+.msg { max-width:88%; padding:9px 12px; border-radius:12px; background:#22253a; align-self:flex-start; word-break:break-word; }
 .msg.me { align-self:flex-end; background:#3c3520; }
 .msg.pm { border:1px dashed #b48ae5; background:#241c2e; }
 .msg .meta { font-size:.7em; color:#9a97a8; margin-bottom:3px; }
-.chat-bar { display:flex; gap:6px; align-items:center; margin-top:10px; }
-.chat-bar select { min-height:44px; border-radius:10px; background:#1b1e2b; color:#e8e6df; border:1px solid #33364a; padding:0 8px; max-width:38%; }
+.chat-bar { display:flex; gap:6px; align-items:center; margin-top:8px; }
+.chat-hint { font-size:.72em; color:#8b8898; margin-bottom:6px; }
 .tabs .tab { font-size:.78em; }
+@media (max-width:420px) { .chat-threads { width:84px; } }
