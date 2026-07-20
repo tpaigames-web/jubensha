@@ -129,6 +129,10 @@ for (const s of list.scripts) {
   // 正则查不出真剧透，只能挡住最直白的那几种写法（「凶手是…」这类）
   ok(!/(?:凶手是|真凶是|真相是|其实是.{0,8}(?:干的|杀|偷))/.test(s.subtitle + s.blurb),
      `${s.title}：选本卡没有直接写出答案`);
+  // 分类标签是**跨全库的断言**：一个「无凶手」标签，等于对所有没打它的本都说了
+  // 「这个有凶手」。所以标签只能描述玩法类型，不能描述剧情事实。
+  const leaky = (s.tags || []).filter((t) => /凶手|真相|结局|死|尸/.test(t));
+  ok(leaky.length === 0, `${s.title}：分类标签不含剧情断言${leaky.length ? "（" + leaky.join("、") + "）" : ""}`);
 }
 
 for (const meta of list.scripts) await playOne(meta);

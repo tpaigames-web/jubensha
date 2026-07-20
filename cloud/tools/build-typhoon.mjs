@@ -815,7 +815,7 @@ const skeleton = {
   meta: {
     titleKey: "meta.title", subtitleKey: "meta.subtitle", blurbKey: "meta.blurb",
     players: 3, durationMin: 110, type: "linear_pve_reconstruction",
-    tags: ["悬疑烧脑", "情感", "现代", "AI创作"],
+    tags: ["悬疑烧脑", "情感", "还原", "现代", "AI创作"],
     difficultyLabel: "中等 · 三人三对，全靠私聊撬",
   },
   // 不配 BGM：底噪吵，也压念白。见 public/audio/README.txt

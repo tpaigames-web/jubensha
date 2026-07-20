@@ -236,7 +236,7 @@ function gotoRoomView() {
 
 // ---------------- 第二步：选本 / 加入 ----------------
 /** 分类的显示顺序。本子上的标签是自由文本，这里只固定常用几类的次序 */
-const TAG_ORDER = ["新手", "欢乐", "悬疑烧脑", "硬核", "情感", "灵异", "无凶手"];
+const TAG_ORDER = ["新手", "欢乐", "悬疑烧脑", "硬核", "还原", "情感", "灵异"];
 const SCRIPTS = { all: [], nPlayers: "", tag: "" };
 
 async function loadScripts() {

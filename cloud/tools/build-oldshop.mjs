@@ -20,7 +20,9 @@ const ID = "oldshop";
 // ═══════════════ 元信息 ═══════════════
 put("meta.title", "四十年");
 put("meta.subtitle", "老店的最后一夜，一份合约，和一串再也没人用的钥匙");
-put("meta.blurb", "南洋一条正在拆迁的老街，一间开了四十年的咖啡店。店主刚走，头七过后，四个后辈被留在店里决定：卖，还是留。没有凶手，要还原的是一个老人最后那几天在做什么。");
+// 「不是推理本」是玩家决定要不要花三小时之前该知道的事；
+// 但别在选本卡上写「没有凶手」——那是对剧情的断言，不该出现在还没开局的地方。
+put("meta.blurb", "南洋一条正在拆迁的老街，一间开了四十年的咖啡店。店主刚走，头七过后，四个后辈被留在店里决定：卖，还是留。这是一个还原本，不靠抓人推进。");
 
 // ═══════════════ 地点 ═══════════════
 const LOC = {
@@ -827,7 +829,7 @@ const skeleton = {
   meta: {
     titleKey: "meta.title", subtitleKey: "meta.subtitle", blurbKey: "meta.blurb",
     players: 4, durationMin: 160, type: "linear_pve_reconstruction",
-    tags: ["情感", "现代", "无凶手", "AI创作"],
+    tags: ["情感", "还原", "现代", "AI创作"],
     difficultyLabel: "推理不难，情绪很重",
   },
   // 不配 BGM：三小时的底噪吵，也压念白。要加就在这里声明 audio，
