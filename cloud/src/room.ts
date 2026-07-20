@@ -19,7 +19,10 @@ import {
 import { hashPin, hashToken, newId, newSalt, newSeatToken, timingSafeEqual } from "./crypto";
 import { getSkeleton, hasSkeleton, isGranted, Skeleton } from "./skeleton";
 import { getContent } from "./content";
-import { availableLocations, entitledKeys, searchCandidates, visibleClues, VisibilityCtx } from "./visibility";
+import {
+  availableLocations, clueVisibleToCharacter, entitledKeys, locationRemaining,
+  searchCandidates, visibleClues, VisibilityCtx,
+} from "./visibility";
 import { getMechanic } from "./mechanics";
 import { lockOneCorrect, revealDecoy, TimelineState } from "./mechanics/timeline_puzzle";
 
@@ -165,6 +168,8 @@ export class RoomDO implements DurableObject {
       actIndex: room.actIndex,
       characterId: seat.characterId,
       unlockedClueIds: room.unlockedClues.map((u) => u.clueId),
+      publishedClueIds: room.unlockedClues.filter((u) => u.published).map((u) => u.clueId),
+      myClueIds: room.unlockedClues.filter((u) => u.bySeatId === seat.seatId).map((u) => u.clueId),
       debriefUnlocked: room.debriefUnlocked,
       completedMechanics: Object.entries(room.mechanics)
         .filter(([mid, s]) => {
@@ -197,13 +202,20 @@ export class RoomDO implements DurableObject {
     const content = getContent(room.scriptId).resolveMany([...allowed]);
 
     const act = room.actIndex >= 0 ? sk.acts[room.actIndex] : null;
-    const myClues = visibleClues(sk, vctx).map((c) => ({
-      id: c.id,
-      titleKey: c.titleKey,
-      contentKey: c.contentKey,
-      location: c.location,
-      private: c.visibility.type === "private",
-    }));
+    const byId = new Map(room.unlockedClues.map((u) => [u.clueId, u]));
+    const myClues = visibleClues(sk, vctx).map((c) => {
+      const u = byId.get(c.id);
+      return {
+        id: c.id,
+        titleKey: c.titleKey,
+        contentKey: c.contentKey,
+        location: c.location,
+        private: c.visibility.type === "private",
+        published: !!u?.published,
+        mine: u?.bySeatId === me.seatId,
+        byName: u?.published && u.bySeatId ? seats[u.bySeatId]?.displayName : undefined,
+      };
+    });
 
     // 已下发过的播报（重连时补齐），同样只回放本席位有权看到的
     const narration = room.narrationLog
@@ -250,6 +262,7 @@ export class RoomDO implements DurableObject {
         locations: act ? act.locations : [],
         /** 其中「对我还有可搜线索」的子集：界面据此把搜空的地点置灰 */
         locationsAvailable: availableLocations(sk, vctx),
+        locationRemaining: locationRemaining(sk, vctx),
         searchQuota: act ? act.searchQuota.perSeat : 0,
         searchUsed: me.searchUsed?.[room.actIndex] ?? 0,
         bgm: this.bgmFor(room, sk, act),
@@ -984,6 +997,29 @@ export class RoomDO implements DurableObject {
               private: clue.visibility.type === "private",
             },
             text: getContent(room.scriptId).resolve(clue.contentKey) ?? "",
+            serverNow: Date.now(),
+          });
+        });
+
+      case "clue.publish":
+        return this.withSeat(ws, room, (seat) => {
+          const id = String(msg.clueId ?? "");
+          const u = room.unlockedClues.find((x) => x.clueId === id);
+          if (!u) return "这条线索还没被找到";
+          if (u.published) return "这条线索已经公开了";
+          // 只有持有者能摊牌。开幕自动下发的（bySeatId 为空）由角色归属判定
+          const clue = sk.clues.find((c) => c.id === id);
+          const owned = u.bySeatId
+            ? u.bySeatId === seat.seatId
+            : !!clue && clueVisibleToCharacter(clue, seat.characterId);
+          if (!owned) return "这不是你手上的线索";
+
+          u.published = true;
+          u.bySeatId = u.bySeatId || seat.seatId;
+          this.broadcast({
+            type: "clue.published",
+            clueId: id,
+            byName: seat.displayName,
             serverNow: Date.now(),
           });
         });

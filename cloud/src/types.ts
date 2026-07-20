@@ -20,7 +20,13 @@ export interface RoomState {
   seatCount: number;
   createdAt: number;
   config: Record<string, unknown>;
-  unlockedClues: { clueId: string; bySeatId: string; at: number }[];
+  /**
+   * 已解锁的线索。
+   * 搜到的线索默认**只有搜到的人看得见**，由他自己决定什么时候 published。
+   * 「什么时候说、说多少、要不要说」是这个游戏的核心，引擎必须让人留得住话。
+   * bySeatId 为空表示开幕自动下发（没有「搜到的人」，按角色可见性裁决）。
+   */
+  unlockedClues: { clueId: string; bySeatId: string; at: number; published?: boolean }[];
   /** 已下发的播报 key（重连时回放） */
   narrationLog: { key: string; at: number }[];
   /** 已触发过的防卡车提示 key，避免重复放 */
@@ -86,6 +92,8 @@ export type ClientMsg =
   | { type: "read.progress"; progress: number }
   | { type: "act.ready" }
   | { type: "clue.unlock"; locationId: string }
+  /** 把自己手上的一条线索公开给全场。只有持有者能公开，且不可撤回 */
+  | { type: "clue.publish"; clueId: string }
   | { type: "vote.cast"; voteId: string; choice: string | string[] }
   | { type: "mechanic.action"; mechanicId: string; payload: unknown }
   | { type: "chat.send"; to?: string | null; text: string }
@@ -122,6 +130,8 @@ export interface SnapshotFull {
     locations: string[];
     /** 其中对本席位仍有可搜线索的地点 */
     locationsAvailable: string[];
+    /** 本幕各地点还剩几条我能搜到的线索，玩家据此分配次数 */
+    locationRemaining: Record<string, number>;
     searchQuota: number;
     searchUsed: number;
     myScriptKeys: string[];
@@ -129,7 +139,17 @@ export interface SnapshotFull {
     bgm: string | null;
   };
   /** location 为 null 表示不是搜出来的（开幕自动下发） */
-  clues: { id: string; titleKey?: string; contentKey: string; location: string | null; private: boolean }[];
+  clues: {
+    id: string; titleKey?: string; contentKey: string; location: string | null;
+    /** 剧本设定的角色专属线索 */
+    private: boolean;
+    /** 已对全场公开 */
+    published: boolean;
+    /** 是我搜到/持有的（未公开时只有我看得见，也只有我能公开） */
+    mine: boolean;
+    /** 公开者的昵称，用于「谁摊的牌」 */
+    byName?: string;
+  }[];
   vote: {
     voteId: string;
     mode: string;

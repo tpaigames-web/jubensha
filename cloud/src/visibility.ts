@@ -22,6 +22,10 @@ export interface VisibilityCtx {
   characterId: string | null;
   /** 房间已解锁的线索 id */
   unlockedClueIds: string[];
+  /** 已对全场公开的线索 id */
+  publishedClueIds?: string[];
+  /** 由本席位搜到/持有的线索 id（未公开时只有他看得见） */
+  myClueIds?: string[];
   /** 已解锁的复盘段 id */
   debriefUnlocked: string[];
   /** 已完成的机制 id。有机制把守的投票，完成前连问题带选项都不下发 */
@@ -52,15 +56,22 @@ export function clueActUnlocked(sk: Skeleton, clue: ClueDef, ctx: VisibilityCtx)
 }
 
 /**
- * 三元组校验：该席位此刻能否看到这条已解锁的线索。
- * 必须同时满足：所属幕已开放 + 已被解锁 + 角色可见性允许。
+ * 该席位此刻能否看到这条已解锁的线索。必须先满足：所属幕已开放 + 已被解锁。
+ * 然后三条路任选其一：
+ *   1. 已对全场公开 —— 有人主动摊了牌，谁都能看
+ *   2. 是我搜到/持有的 —— 还没公开，只有我看得见
+ *   3. 开幕自动下发的角色专属线索 —— 按角色可见性裁决
+ * 注意第 1 条要压过角色限制：玩家决定把自己的专属线索摊开时，别人就该看得到。
  */
 export function canSeeClue(sk: Skeleton, clue: ClueDef, ctx: VisibilityCtx): boolean {
-  return (
-    clueActUnlocked(sk, clue, ctx) &&
-    ctx.unlockedClueIds.includes(clue.id) &&
-    clueVisibleToCharacter(clue, ctx.characterId)
-  );
+  if (!clueActUnlocked(sk, clue, ctx)) return false;
+  if (!ctx.unlockedClueIds.includes(clue.id)) return false;
+  if (ctx.publishedClueIds?.includes(clue.id)) return true;
+  if (ctx.myClueIds?.includes(clue.id)) return true;
+  // 没有「持有者」的（开幕自动下发）才回落到角色可见性
+  const held = ctx.myClueIds !== undefined;
+  if (held && clue.grant !== "on_act_start") return false;
+  return clueVisibleToCharacter(clue, ctx.characterId);
 }
 
 /** 该席位此刻可见的线索列表 */
@@ -91,16 +102,26 @@ export function searchCandidates(
   );
 }
 
-/**
- * 本幕中「对该席位仍有可搜线索」的地点。
- * 只回地点名单、不回剩余条数——避免泄露线索总量，同时让界面能把搜空的地点置灰，
- * 不然玩家会对着已经搜空的地点反复空点。
- */
+/** 本幕中「对该席位仍有可搜线索」的地点 */
 export function availableLocations(sk: Skeleton, ctx: VisibilityCtx): string[] {
   if (ctx.phase !== "playing" || ctx.actIndex < 0) return [];
   const act = sk.acts[ctx.actIndex];
   if (!act) return [];
   return act.locations.filter((loc) => searchCandidates(sk, ctx, loc).length > 0);
+}
+
+/**
+ * 本幕各地点还剩几条「这个席位能搜到的」线索。
+ * 玩家要靠它决定把有限的次数花在哪儿——只说本幕这个地点剩几条，
+ * 不暴露全本线索总量，也不暴露内容。
+ */
+export function locationRemaining(sk: Skeleton, ctx: VisibilityCtx): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (ctx.phase !== "playing" || ctx.actIndex < 0) return out;
+  const act = sk.acts[ctx.actIndex];
+  if (!act) return out;
+  for (const loc of act.locations) out[loc] = searchCandidates(sk, ctx, loc).length;
+  return out;
 }
 
 /**

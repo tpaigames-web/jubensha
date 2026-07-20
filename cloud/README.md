@@ -144,6 +144,7 @@ node test-oldshop.mjs                  # 《四十年》整局 + 防剧透全文
 node test-typhoon.mjs                  # 《台风夜》整局 + 多数决结算
 node test-shop40-shape.mjs             # shop40 骨架结构验收（占位文案，验引擎不验剧情）
 node test-all-scripts.mjs              # 全剧本冒烟：每个本都从入座跑到结束
+node test-clue.mjs                     # 搜证私藏与主动公开
 # 每条后面加 https://jubensha.tpaigames.workers.dev 即可打生产
 ```
 

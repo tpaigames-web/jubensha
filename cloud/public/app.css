@@ -107,9 +107,13 @@ input:focus { border-color:#d9b45b; }
 
 /* 线索 */
 .loc-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
-.loc-btn { min-height:56px; border:1px solid #33364a; background:#1b1e2b; color:#e8e6df; border-radius:12px; font-weight:600; cursor:pointer; }
+.loc-btn { min-height:60px; border:1px solid #33364a; background:#1b1e2b; color:#e8e6df; border-radius:12px; font-weight:600; cursor:pointer; padding:8px 6px; }
+.loc-btn small { display:block; font-weight:400; font-size:.78em; color:#8b8898; margin-top:3px; }
+.loc-btn:disabled { opacity:.45; }
 .clue { background:#1b1e2b; border:1px solid #2a2d3f; border-radius:12px; padding:11px 12px; margin-bottom:9px; }
-.clue.private { border-color:#4a3550; background:#221c28; }
+/* 还没摊出去的：紫边，一眼能和已公开的区分开 */
+.clue.private { border-color:#6b4a80; background:#221c28; }
+.clue-t { font-weight:700; margin:4px 0 3px; }
 
 /* 投票 */
 .vote-opt {

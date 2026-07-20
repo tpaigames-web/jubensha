@@ -139,7 +139,7 @@ function handle(m) {
           S.room = "";
           banner("");
           show("room");
-          toast(`房号 ${j.code} 还没有人。要开新局请在上面选剧本；加入朋友请核对房号。`);
+          toast(`房号 ${j.code} 还没有人。要开新局请在下面选剧本；加入朋友请核对房号。`);
           return;
         }
         send({ type: "seat.claim", displayName: S.name, pin: S.pin });
@@ -174,7 +174,11 @@ function handle(m) {
       break;
 
     case "clue.granted":
-      toast("获得线索", true);
+      toast("你搜到一条线索（只有你看得见）", true);
+      break;
+
+    case "clue.published":
+      toast(`${m.byName} 公开了一条线索`, true);
       break;
 
     case "seat.elsewhere":
@@ -467,27 +471,55 @@ window.addEventListener("scroll", () => {
 function renderClue() {
   const st = S.st;
   let html = "";
+
   if (st.room.phase === "playing" && st.script.locations.length) {
     const left = st.script.searchQuota - st.script.searchUsed;
+    const rem = st.script.locationRemaining || {};
     const avail = new Set(st.script.locationsAvailable || st.script.locations);
     const nothingLeft = avail.size === 0;
     html += `<div class="card"><h2>🔍 搜证</h2>
       <p class="hint" style="margin-bottom:8px">本幕剩余 <b style="color:#d9b45b">${left}</b> 次${nothingLeft ? " · 这一幕已经没有你能搜到的线索了" : ""}</p>
       <div class="loc-grid">${st.script.locations.map((l) => {
+        const n = rem[l] ?? 0;
         const off = left <= 0 || !avail.has(l);
-        return `<button class="loc-btn" data-loc="${esc(l)}" ${off ? "disabled" : ""}>📍 ${esc(st.content[l] || l)}${!avail.has(l) ? "<br><span class='hint'>已搜空</span>" : ""}</button>`;
+        const tail = avail.has(l) ? `剩余线索 ${n} 条` : "已搜空";
+        return `<button class="loc-btn" data-loc="${esc(l)}" ${off ? "disabled" : ""}>📍 ${esc(st.content[l] || l)}<small>${tail}</small></button>`;
       }).join("")}</div>
     </div>`;
   }
-  html += `<div class="card"><h2>📜 我掌握的线索（${st.clues.length}）</h2>` +
-    (st.clues.length ? st.clues.map((c) => `
-      <div class="clue ${c.private ? "private" : ""}">
-        <div class="hint">📍 ${esc(st.content[c.location] || c.location)} ${c.private ? "· 🔒 私有" : ""}</div>
-        <div>${esc(st.content[c.contentKey] || "")}</div>
-      </div>`).join("") : '<p class="hint">还没有线索</p>') + `</div>`;
+
+  // 手上的（还没公开）和已经摊开的分两栏——摊不摊牌是这个游戏最要紧的选择
+  const clueCard = (c) => `
+    <div class="clue ${c.published ? "" : "private"}">
+      <div class="hint">📍 ${esc(st.content[c.location] || c.location || "随身")}
+        ${c.private ? "· 🎭 角色专属" : ""}
+        ${c.published && c.byName ? `· 由 ${esc(c.byName)} 公开` : ""}</div>
+      ${c.titleKey && st.content[c.titleKey] ? `<div class="clue-t">${esc(st.content[c.titleKey])}</div>` : ""}
+      <div>${esc(st.content[c.contentKey] || "")}</div>
+      ${!c.published && c.mine
+        ? `<div class="row" style="margin-top:9px"><button class="btn ghost" data-pub="${esc(c.id)}">📢 公开给所有人</button></div>`
+        : ""}
+    </div>`;
+
+  const held = st.clues.filter((c) => !c.published);
+  const open = st.clues.filter((c) => c.published);
+
+  html += `<div class="card"><h2>🔒 我手上的线索（${held.length}）</h2>
+    <p class="hint" style="margin-bottom:8px">只有你看得见。什么时候摊出来，你自己决定——公开之后不能收回。</p>
+    ${held.length ? held.map(clueCard).join("") : '<p class="hint">还没有线索</p>'}</div>`;
+
+  html += `<div class="card"><h2>📢 已公开的线索（${open.length}）</h2>
+    ${open.length ? open.map(clueCard).join("") : '<p class="hint">还没有人摊牌。</p>'}</div>`;
+
   $("p-clue").innerHTML = html;
   $("p-clue").querySelectorAll("[data-loc]").forEach((el) => {
     el.onclick = () => send({ type: "clue.unlock", locationId: el.dataset.loc });
+  });
+  $("p-clue").querySelectorAll("[data-pub]").forEach((el) => {
+    el.onclick = () => {
+      if (!confirm("公开之后所有人都能看到，而且收不回来。确定吗？")) return;
+      send({ type: "clue.publish", clueId: el.dataset.pub });
+    };
   });
   S.seen.clue = st.clues.length;
 }

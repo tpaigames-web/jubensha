@@ -46,19 +46,20 @@
       <button class="icon-btn" id="btn-back-login">‹</button>
       <div class="grow"><b id="who-label">—</b><div class="hint">开新局，或加入朋友的房间</div></div>
     </div>
-    <div class="card">
-      <h2>🎭 开一局新的</h2>
-      <p class="hint" style="margin-bottom:10px">选一个剧本，系统会分配房号给你发给朋友</p>
-      <div id="script-filters"></div>
-      <div id="script-list"><p class="hint">加载剧本中…</p></div>
-    </div>
+    <!-- 加入放最上面：一局里只有一个人选本，其余人都是来输房号的 -->
     <div class="card">
       <h2>🚪 加入朋友的房间</h2>
       <div class="row">
         <input id="in-room" class="grow" inputmode="numeric" maxlength="4" placeholder="输入4位房号">
         <button id="btn-join" class="btn primary" style="flex:none">加入</button>
       </div>
-      <p class="hint" style="margin-top:8px">⚠️ 只能加入<b>已经有人</b>的房间。想决定玩哪个剧本，请用上面的「开一局新的」。</p>
+      <p class="hint" style="margin-top:8px">⚠️ 只能加入<b>已经有人</b>的房间。想决定玩哪个剧本，请用下面的「开一局新的」。</p>
+    </div>
+    <div class="card">
+      <h2>🎭 开一局新的</h2>
+      <p class="hint" style="margin-bottom:10px">选一个剧本，系统会分配房号给你发给朋友</p>
+      <div id="script-filters"></div>
+      <div id="script-list"><p class="hint">加载剧本中…</p></div>
     </div>
   </section>
 

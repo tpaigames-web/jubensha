@@ -81,6 +81,19 @@ function makeBot(name, pin) {
       }
     }
 
+    // 搜到的线索默认是私藏的。机器人是来陪练的，不是来藏牌的——
+    // 全都摊出去，人类玩家才有东西可看。
+    const hoarding = (st.clues || []).filter((c) => c.mine && !c.published);
+    if (hoarding.length) {
+      const c = hoarding[0];
+      if (!bot.done.has("pub_" + c.id)) {
+        bot.done.add("pub_" + c.id);
+        await wait(600 + Math.random() * 900);
+        ws.send(JSON.stringify({ type: "clue.publish", clueId: c.id }));
+        return;
+      }
+    }
+
     // 机制：把自己的碎片放进空格
     // 注意：多人可能抢同一个空格，服务端会拒绝其中一个。
     // 因此这里不能"尝试一次就永久标记完成"，必须允许重试并随机挑格子降低碰撞。
