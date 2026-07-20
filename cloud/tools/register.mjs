@@ -53,8 +53,9 @@ lines.push("export const PACK_TEXT: Record<string, string> = {");
 for (const id of ids) lines.push(`  ${JSON.stringify(id)}: pk_${safe(packOf[id])} as unknown as string,`);
 lines.push("};");
 lines.push("");
-lines.push("/** 不对玩家展示的内部剧本（仅计时探针；占位测试本保留可见，方便自测流程） */");
-lines.push("export const HIDDEN_SCRIPTS = new Set<string>([\"fasttest\"]);");
+lines.push("/** 不对玩家展示的内部剧本：测试夹具，不该出现在朋友的选本列表里。");
+lines.push(" *  仍可用 /ws?room=XXXX&script=<id> 直连自测。 */");
+lines.push("export const HIDDEN_SCRIPTS = new Set<string>([\"fasttest\", \"placeholder\"]);");
 lines.push("");
 
 writeFileSync(resolve(__dir, "..", "src", "registry.gen.ts"), lines.join("\n"), "utf8");

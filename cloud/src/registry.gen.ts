@@ -25,5 +25,6 @@ export const PACK_TEXT: Record<string, string> = {
   "shop40": pk_s_shop40 as unknown as string,
 };
 
-/** 不对玩家展示的内部剧本（仅计时探针；占位测试本保留可见，方便自测流程） */
-export const HIDDEN_SCRIPTS = new Set<string>(["fasttest"]);
+/** 不对玩家展示的内部剧本：测试夹具，不该出现在朋友的选本列表里。
+ *  仍可用 /ws?room=XXXX&script=<id> 直连自测。 */
+export const HIDDEN_SCRIPTS = new Set<string>(["fasttest", "placeholder"]);
