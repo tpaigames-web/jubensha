@@ -231,20 +231,72 @@ function gotoRoomView() {
 }
 
 // ---------------- 第二步：选本 / 加入 ----------------
+/** 分类的显示顺序。本子上的标签是自由文本，这里只固定常用几类的次序 */
+const TAG_ORDER = ["新手", "欢乐", "悬疑烧脑", "硬核", "情感", "灵异", "无凶手"];
+const SCRIPTS = { all: [], nPlayers: "", tag: "" };
+
 async function loadScripts() {
   try {
     const r = await fetch("/api/scripts").then((x) => x.json());
-    $("script-list").innerHTML = r.scripts.map((s) => `
-      <div class="char-card" data-script="${esc(s.scriptId)}">
-        <b>${esc(s.title)}</b>
-        <div class="hint">${s.players} 人本 · 约 ${s.durationMin} 分钟</div>
-      </div>`).join("") || '<p class="hint">暂无可用剧本</p>';
-    $("script-list").querySelectorAll("[data-script]").forEach((el) => {
-      el.onclick = () => createRoom(el.dataset.script);
-    });
+    // 按人数排，人数相同的短本在前——找本的人多半先想「今晚几个人」
+    SCRIPTS.all = (r.scripts || []).sort((a, b) => a.players - b.players || a.durationMin - b.durationMin);
+    renderScriptFilters();
+    renderScriptList();
   } catch {
     $("script-list").innerHTML = '<p class="hint">剧本列表加载失败，检查网络后重试</p>';
   }
+}
+
+function renderScriptFilters() {
+  const counts = [...new Set(SCRIPTS.all.map((s) => s.players))].sort((a, b) => a - b);
+  const tags = [...new Set(SCRIPTS.all.flatMap((s) => s.tags || []))]
+    .filter((t) => t !== "AI创作")                       // 这个不是分类，是署名
+    .sort((a, b) => {
+      const ia = TAG_ORDER.indexOf(a), ib = TAG_ORDER.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+
+  const chip = (label, kind, val, on) =>
+    `<button class="chip ${on ? "on" : ""}" data-kind="${kind}" data-val="${esc(val)}">${esc(label)}</button>`;
+
+  $("script-filters").innerHTML =
+    `<div class="chips">${chip("全部人数", "n", "", !SCRIPTS.nPlayers)}` +
+      counts.map((n) => chip(`${n} 人`, "n", String(n), SCRIPTS.nPlayers === String(n))).join("") + `</div>` +
+    `<div class="chips">${chip("全部类型", "t", "", !SCRIPTS.tag)}` +
+      tags.map((t) => chip(t, "t", t, SCRIPTS.tag === t)).join("") + `</div>`;
+
+  $("script-filters").querySelectorAll("[data-kind]").forEach((el) => {
+    el.onclick = () => {
+      if (el.dataset.kind === "n") SCRIPTS.nPlayers = el.dataset.val;
+      else SCRIPTS.tag = el.dataset.val;
+      renderScriptFilters();
+      renderScriptList();
+    };
+  });
+}
+
+function renderScriptList() {
+  const list = SCRIPTS.all.filter((s) =>
+    (!SCRIPTS.nPlayers || String(s.players) === SCRIPTS.nPlayers) &&
+    (!SCRIPTS.tag || (s.tags || []).includes(SCRIPTS.tag)));
+
+  $("script-list").innerHTML = list.map((s) => {
+    const tags = (s.tags || []).map((t) =>
+      `<span class="tag ${t === "AI创作" ? "" : "cat"}">${esc(t)}</span>`).join("");
+    return `<div class="script-card" data-script="${esc(s.scriptId)}">
+      <div class="sc-head">
+        <b>${esc(s.title)}</b>
+        <span class="sc-meta">${s.players} 人 · 约 ${s.durationMin} 分钟</span>
+      </div>
+      ${s.subtitle ? `<div class="sc-sub">${esc(s.subtitle)}</div>` : ""}
+      ${s.blurb ? `<div class="sc-blurb">${esc(s.blurb)}</div>` : ""}
+      <div class="sc-tags">${tags}${s.difficulty ? `<span class="tag">${esc(s.difficulty)}</span>` : ""}</div>
+    </div>`;
+  }).join("") || '<p class="hint">这个条件下没有本。换个人数或类型看看。</p>';
+
+  $("script-list").querySelectorAll("[data-script]").forEach((el) => {
+    el.onclick = () => createRoom(el.dataset.script);
+  });
 }
 
 /**

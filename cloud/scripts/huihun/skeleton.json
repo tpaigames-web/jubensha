@@ -3,9 +3,18 @@
   "schemaVersion": 1,
   "meta": {
     "titleKey": "meta.title",
+    "subtitleKey": "meta.subtitle",
+    "blurbKey": "meta.blurb",
     "players": 6,
     "durationMin": 65,
-    "type": "whodunit"
+    "type": "whodunit",
+    "tags": [
+      "灵异",
+      "悬疑烧脑",
+      "民国",
+      "AI创作"
+    ],
+    "difficultyLabel": "中等 · 灵异氛围"
   },
   "characters": [
     {

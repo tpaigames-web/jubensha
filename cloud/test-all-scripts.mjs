@@ -10,7 +10,6 @@
  */
 const HTTP = process.argv[2] || "http://127.0.0.1:8788";
 const WSBASE = HTTP.replace(/^http/, "ws");
-import { findFreeRoom } from "./test-util.mjs";
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { console.log((c ? "  PASS " : "  FAIL ") + m); c ? pass++ : (fail++, process.exitCode = 1); };
@@ -43,7 +42,12 @@ const st = (p) => p.last("snapshot.full");
 async function playOne(meta) {
   const { scriptId, players, title } = meta;
   console.log(`\n【${title}】${scriptId} · ${players} 人`);
-  const room = await findFreeRoom(WSBASE, scriptId);
+  // 必须用服务端分配（/api/newroom），不能自己探号：
+  // 空房不等于「这个本的空房」——一个先前用别的剧本建过、现在没人的房间
+  // 同样是空的 lobby，探号会当它可用，然后整局跑的其实是另一个本的内容。
+  const alloc = await fetch(`${HTTP}/api/newroom?script=${encodeURIComponent(scriptId)}`).then((r) => r.json());
+  const room = alloc.room;
+  ok(/^\d{4}$/.test(room || ""), `分到房号 ${room}`);
   const P = [];
   for (let i = 0; i < players; i++) {
     const c = await conn(room, scriptId);
@@ -53,6 +57,7 @@ async function playOne(meta) {
     P.push(c);
   }
   ok(st(P[0])?.room?.seatCount === players, `坐满 ${players} 人`);
+  ok(st(P[0])?.script?.scriptId === scriptId, `房间用的确实是 ${scriptId}`);
 
   const chars = st(P[0])?.script?.characters ?? [];
   ok(chars.length === players, `角色数与人数一致（${chars.length}）`);
@@ -111,6 +116,21 @@ async function playOne(meta) {
 
 const list = await fetch(HTTP + "/api/scripts").then((r) => r.json());
 console.log(`目标: ${HTTP} | 选本列表共 ${list.scripts.length} 个剧本`);
+
+// 选本页要能让人不点进去就知道这是个什么本
+console.log("\n【选本卡】每个本都要有描述与分类");
+for (const s of list.scripts) {
+  const miss = [];
+  if (!s.subtitle) miss.push("钩子");
+  if (!s.blurb || s.blurb.length < 20) miss.push("简介");
+  if (!(s.tags || []).length) miss.push("分类标签");
+  if (!s.difficulty) miss.push("难度");
+  ok(miss.length === 0, `${s.title}：描述齐全${miss.length ? "（缺 " + miss.join("、") + "）" : ""}`);
+  // 正则查不出真剧透，只能挡住最直白的那几种写法（「凶手是…」这类）
+  ok(!/(?:凶手是|真凶是|真相是|其实是.{0,8}(?:干的|杀|偷))/.test(s.subtitle + s.blurb),
+     `${s.title}：选本卡没有直接写出答案`);
+}
+
 for (const meta of list.scripts) await playOne(meta);
 
 console.log(`\n=== 全剧本冒烟：${pass} 通过 / ${fail} 失败 ===`);

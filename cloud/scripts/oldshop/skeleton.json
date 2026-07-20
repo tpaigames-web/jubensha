@@ -3,9 +3,18 @@
   "schemaVersion": 1,
   "meta": {
     "titleKey": "meta.title",
+    "subtitleKey": "meta.subtitle",
+    "blurbKey": "meta.blurb",
     "players": 4,
     "durationMin": 160,
-    "type": "linear_pve_reconstruction"
+    "type": "linear_pve_reconstruction",
+    "tags": [
+      "情感",
+      "现代",
+      "无凶手",
+      "AI创作"
+    ],
+    "difficultyLabel": "推理不难，情绪很重"
   },
   "characters": [
     {

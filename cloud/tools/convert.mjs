@@ -72,6 +72,28 @@ function relationBlock(c) {
 
 // ---- 元信息 ----
 put("meta.title", old.title);
+// 选本卡上的钩子与简介。**只讲设定，不讲剧情**——背景本来就是全员公开的那一段。
+put("meta.subtitle", old.tagline ?? "");
+put("meta.blurb", EN.blurb ?? blurbOf(old.background));
+
+/**
+ * 简介：从背景里取头几句。背景本来就是全员公开的那一段，拿来当简介不会剧透。
+ * 卡片上放不下太多字，超过 80 就收在上一句。
+ */
+function blurbOf(text) {
+  const parts = String(text ?? "").split(/(?<=[。！？])/).filter((s) => s.trim());
+  let out = "";
+  for (const p of parts) {
+    if (out.length >= 45) break;              // 够一眼看明白就收，别贪
+    if (out && (out + p).length > 100) break; // 但也不能让一个长句撑爆卡片
+    out += p;
+  }
+  return out.trim();
+}
+
+/** 旧数据的难度字段里塞了人数（「中等 · 5人」），而卡片已经单独显示人数了 */
+const difficultyLabel = String(old.difficulty ?? "")
+  .split("·").map((x) => x.trim()).filter((x) => x && !/^\d+\s*人$/.test(x)).join(" · ");
 
 // ---- 角色 ----
 const characters = old.characters.map((c) => ({
@@ -266,9 +288,13 @@ const skeleton = {
   schemaVersion: 1,
   meta: {
     titleKey: "meta.title",
+    subtitleKey: "meta.subtitle",
+    blurbKey: "meta.blurb",
     players: old.characters.length,
     durationMin: acts.reduce((a, x) => a + x.durationMin, 0),
     type: "whodunit",
+    tags: EN.tags ?? old.tags ?? [],
+    difficultyLabel: EN.difficultyLabel ?? difficultyLabel,
   },
   characters,
   acts,

@@ -3,9 +3,17 @@
   "schemaVersion": 1,
   "meta": {
     "titleKey": "meta.title",
+    "subtitleKey": "meta.subtitle",
+    "blurbKey": "meta.blurb",
     "players": 3,
     "durationMin": 65,
-    "type": "whodunit"
+    "type": "whodunit",
+    "tags": [
+      "悬疑烧脑",
+      "古风",
+      "AI创作"
+    ],
+    "difficultyLabel": "中等"
   },
   "characters": [
     {

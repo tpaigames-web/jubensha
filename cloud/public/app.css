@@ -63,6 +63,29 @@ input:focus { border-color:#d9b45b; }
 .progressbar > i { display:block; height:100%; background:#d9b45b; }
 
 /* 角色选择 */
+/* 选本卡：标题 + 钩子 + 简介 + 分类，让人不点进去也知道这是个什么本 */
+.script-card {
+  border:1px solid #33364a; border-radius:12px; padding:12px 14px;
+  margin-bottom:10px; cursor:pointer;
+}
+.script-card:active { border-color:#d9b45b; background:#26221540; }
+.sc-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.sc-head b { font-size:1.08em; }
+.sc-meta { font-size:.8em; color:#8b8898; margin-left:auto; white-space:nowrap; }
+.sc-sub { color:#d9b45b; font-size:.9em; margin-top:5px; line-height:1.5; }
+.sc-blurb { color:#a8a5b4; font-size:.86em; margin-top:6px; line-height:1.6; }
+.sc-tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:9px; }
+.tag.cat { background:#2a3550; color:#9fc0e8; }
+
+/* 筛选条 */
+.chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+.chip {
+  background:#22243a; border:1px solid #33364a; color:#c9c6b8;
+  border-radius:999px; padding:8px 15px; font-size:.85em;
+  min-height:40px; cursor:pointer;   /* 长辈也要点得中 */
+}
+.chip.on { background:#d9b45b; border-color:#d9b45b; color:#1b1405; font-weight:700; }
+
 .char-card { border:1px solid #33364a; border-radius:12px; padding:12px; margin-bottom:9px; cursor:pointer; min-height:44px; }
 .char-card.mine { border-color:#d9b45b; background:#26221580; }
 .char-card.taken { opacity:.5; }

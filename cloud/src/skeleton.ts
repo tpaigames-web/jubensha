@@ -81,16 +81,24 @@ export interface Skeleton {
   schemaVersion: number;
   meta: {
     titleKey: string;
+    /** 一句话钩子，显示在选本卡的标题下面 */
     subtitleKey?: string;
+    /** 三五十字的简介，仍然只讲设定，不能剧透 */
     blurbKey?: string;
     introNarrationKey?: string;
     players: number;
     durationMin: number;
     type: string;
+    /** 分类标签：新手 / 悬疑烧脑 / 欢乐 / 灵异 / 情感 / 古风 / AI创作 … */
+    tags?: string[];
+    /** 难度的人话描述，如「中等偏硬核」 */
+    difficultyLabel?: string;
     difficulty?: Record<string, number>;
     contentRating?: string;
     contentWarnings?: string[];
     reversibleRoles?: boolean;
+    /** 在制品：不进选本列表，也不能被 /api/newroom 开局 */
+    draft?: boolean;
   };
   audio?: AudioDecl;
   characters: { id: string; nameKey: string; briefKey: string; tagsKey?: string }[];
@@ -183,4 +191,8 @@ export const listScripts = () =>
     players: s.meta.players,
     durationMin: s.meta.durationMin,
     titleKey: s.meta.titleKey,
+    subtitleKey: s.meta.subtitleKey,
+    blurbKey: s.meta.blurbKey,
+    tags: s.meta.tags ?? [],
+    difficultyLabel: s.meta.difficultyLabel,
   }));

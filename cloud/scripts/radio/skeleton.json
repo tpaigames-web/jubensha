@@ -3,9 +3,18 @@
   "schemaVersion": 1,
   "meta": {
     "titleKey": "meta.title",
+    "subtitleKey": "meta.subtitle",
+    "blurbKey": "meta.blurb",
     "players": 5,
     "durationMin": 65,
-    "type": "whodunit"
+    "type": "whodunit",
+    "tags": [
+      "悬疑烧脑",
+      "硬核",
+      "现代",
+      "AI创作"
+    ],
+    "difficultyLabel": "中等偏硬核"
   },
   "characters": [
     {

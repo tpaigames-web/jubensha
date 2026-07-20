@@ -69,13 +69,21 @@ export default {
     // 可选剧本列表：只回公开元信息（标题/人数/时长），不含任何剧情
     if (url.pathname === "/api/scripts") {
       const scripts = listScripts()
-        .filter((s) => !HIDDEN_SCRIPTS.has(s.scriptId)) // 测试/探针本不对玩家展示
-        .map((s) => ({
-          scriptId: s.scriptId,
-          players: s.players,
-          durationMin: s.durationMin,
-          title: getContent(s.scriptId).resolve(s.titleKey) ?? s.scriptId,
-        }));
+        .filter((s) => !HIDDEN_SCRIPTS.has(s.scriptId)) // 测试/在制品不对玩家展示
+        .map((s) => {
+          const src = getContent(s.scriptId);
+          return {
+            scriptId: s.scriptId,
+            players: s.players,
+            durationMin: s.durationMin,
+            title: src.resolve(s.titleKey) ?? s.scriptId,
+            // 选本页只给设定与分类，绝不给剧情
+            subtitle: s.subtitleKey ? src.resolve(s.subtitleKey) ?? "" : "",
+            blurb: s.blurbKey ? src.resolve(s.blurbKey) ?? "" : "",
+            tags: s.tags,
+            difficulty: s.difficultyLabel ?? "",
+          };
+        });
       return Response.json({ scripts });
     }
 

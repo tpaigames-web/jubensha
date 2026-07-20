@@ -20,6 +20,8 @@ const put = (k, v) => { C[k] = String(v).trim(); return k; };
 const ID = "typhoon";
 
 put("meta.title", "台风夜");
+put("meta.subtitle", "八号风球，卷闸半落，三个人被关在同一间便利店里");
+put("meta.blurb", "组屋楼下唯一还亮着灯的地方。一个本该休假却来了的夜班店员，一个买了瓶水站两个钟头不走的客人，一个风球一挂就赶来的店长。三个人恰好构成三对，每一对都有第三个人不知道的事。");
 
 // ═══════════════ 地点 ═══════════════
 const LOC = {
@@ -810,7 +812,12 @@ const acts = [
 const skeleton = {
   scriptId: ID,
   schemaVersion: 1,
-  meta: { titleKey: "meta.title", players: 3, durationMin: 110, type: "linear_pve_reconstruction" },
+  meta: {
+    titleKey: "meta.title", subtitleKey: "meta.subtitle", blurbKey: "meta.blurb",
+    players: 3, durationMin: 110, type: "linear_pve_reconstruction",
+    tags: ["悬疑烧脑", "情感", "现代", "AI创作"],
+    difficultyLabel: "中等 · 三人三对，全靠私聊撬",
+  },
   // 不配 BGM：底噪吵，也压念白。见 public/audio/README.txt
   characters,
   acts,

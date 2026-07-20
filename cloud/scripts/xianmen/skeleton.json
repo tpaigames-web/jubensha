@@ -3,9 +3,18 @@
   "schemaVersion": 1,
   "meta": {
     "titleKey": "meta.title",
+    "subtitleKey": "meta.subtitle",
+    "blurbKey": "meta.blurb",
     "players": 5,
     "durationMin": 65,
-    "type": "whodunit"
+    "type": "whodunit",
+    "tags": [
+      "新手",
+      "欢乐",
+      "古风",
+      "AI创作"
+    ],
+    "difficultyLabel": "简单欢乐"
   },
   "characters": [
     {

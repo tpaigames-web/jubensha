@@ -19,6 +19,8 @@ const ID = "oldshop";
 
 // ═══════════════ 元信息 ═══════════════
 put("meta.title", "四十年");
+put("meta.subtitle", "老店的最后一夜，一份合约，和一串再也没人用的钥匙");
+put("meta.blurb", "南洋一条正在拆迁的老街，一间开了四十年的咖啡店。店主刚走，头七过后，四个后辈被留在店里决定：卖，还是留。没有凶手，要还原的是一个老人最后那几天在做什么。");
 
 // ═══════════════ 地点 ═══════════════
 const LOC = {
@@ -822,7 +824,12 @@ const acts = [
 const skeleton = {
   scriptId: ID,
   schemaVersion: 1,
-  meta: { titleKey: "meta.title", players: 4, durationMin: 160, type: "linear_pve_reconstruction" },
+  meta: {
+    titleKey: "meta.title", subtitleKey: "meta.subtitle", blurbKey: "meta.blurb",
+    players: 4, durationMin: 160, type: "linear_pve_reconstruction",
+    tags: ["情感", "现代", "无凶手", "AI创作"],
+    difficultyLabel: "推理不难，情绪很重",
+  },
   // 不配 BGM：三小时的底噪吵，也压念白。要加就在这里声明 audio，
   // 素材可用 tools/gen-audio.py 生成（见 README）。
   characters,
