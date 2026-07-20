@@ -683,6 +683,27 @@ export class RoomDO implements DurableObject {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+
+    /**
+     * 开新局占号：只由 Worker 侧调用（见 index.ts 的 /api/newroom）。
+     * 以前是前端连开好几条 WebSocket 去试房号，手机在微信里很容易失败，
+     * 而且失败一次整个「开一局新的」就没反应了。改成服务端一次定好。
+     */
+    if (url.pathname === "/alloc") {
+      const existing = await this.mustGetRoom();
+      const seats = await this.getSeats();
+      const empty = Object.keys(seats).length === 0;
+      if (existing && !empty) return Response.json({ free: false });
+
+      const want = url.searchParams.get("script") ?? "placeholder";
+      // 空房但剧本不是想要的那个（多半是以前探号留下的残壳）：没人坐过，重置无损
+      if (existing && empty && existing.scriptId !== want && existing.phase === "lobby") {
+        await this.ctx.storage.deleteAll();
+      }
+      await this.getRoom(url.searchParams.get("room") ?? "0000", want);
+      return Response.json({ free: true });
+    }
+
     // script 仅在房间首次创建时生效；已存在的房间不会被后来者改剧本
     const room = await this.getRoom(
       url.searchParams.get("room") ?? "0000",

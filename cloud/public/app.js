@@ -85,17 +85,22 @@ function loadSession() {
 
 // ---------------- 连接 ----------------
 function connect(room, onOpen) {
+  // 先把上一条连接彻底断掉并解绑回调。不解绑的话，旧 socket 晚一步关闭时
+  // 它的 onclose 仍会触发重连，把刚建好的这条连接顶掉——表现就是「刚进房又被踢出来」。
+  closeSocket();
   S.room = room;
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}/ws?room=${encodeURIComponent(room)}`);
   S.ws = ws;
 
   ws.onopen = () => {
+    if (S.ws !== ws) return;                 // 已被更新的连接取代
     S.connected = true; S.retry = 0; banner("");
     onOpen && onOpen();
   };
-  ws.onmessage = (e) => handle(JSON.parse(e.data));
+  ws.onmessage = (e) => { if (S.ws === ws) handle(JSON.parse(e.data)); };
   ws.onclose = () => {
+    if (S.ws !== ws) return;                 // 这是条过期连接，别拿它去重连
     S.connected = false;
     banner("连接已断开，正在重连…", "warn");
     const delay = Math.min(1000 * Math.pow(1.6, S.retry++), 8000);
@@ -103,8 +108,17 @@ function connect(room, onOpen) {
   };
   ws.onerror = () => {};
 }
+
+/** 断开当前连接并解绑，之后它再关闭也不会引发重连 */
+function closeSocket() {
+  const ws = S.ws;
+  S.ws = null; S.connected = false;
+  if (!ws) return;
+  try { ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null; ws.close(); } catch {}
+}
+
 function reconnect() {
-  if (S.connected) return;
+  if (S.connected || !S.room) return;        // 不在任何房间里就别重连
   connect(S.room, () => {
     if (S.token) send({ type: "seat.resume", seatToken: S.token });
   });
@@ -121,8 +135,8 @@ function handle(m) {
       if (j) {
         S._pendingJoin = null;
         if (m.room.seatsTaken === 0 && !j.expectNew) {
-          try { if (S.ws) { S.ws.onclose = null; S.ws.close(); } } catch {}
-          S.ws = null; S.connected = false;
+          closeSocket();
+          S.room = "";
           banner("");
           show("room");
           toast(`房号 ${j.code} 还没有人。要开新局请在上面选剧本；加入朋友请核对房号。`);
@@ -233,25 +247,21 @@ async function loadScripts() {
   }
 }
 
-const rnd4 = () => String(Math.floor(1000 + Math.random() * 9000));
-
-/** 开新局：随机房号，若撞上已有人的房间则换一个 */
-function createRoom(scriptId, tries = 0) {
-  if (tries > 6) return toast("房号分配失败，请重试");
-  const code = rnd4();
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const probe = new WebSocket(`${proto}://${location.host}/ws?room=${code}&script=${encodeURIComponent(scriptId)}`);
-  const timer = setTimeout(() => { try { probe.close(); } catch {} ; createRoom(scriptId, tries + 1); }, 6000);
-  probe.onmessage = (e) => {
-    const m = JSON.parse(e.data);
-    if (m.type !== "hello") return;
-    clearTimeout(timer);
-    probe.onmessage = null;
-    try { probe.close(); } catch {}
-    if (m.room.seatsTaken > 0) return createRoom(scriptId, tries + 1); // 撞号了，换一个
-    enterRoom(code, true); // 自己刚开的新局，空房是正常的
-  };
-  probe.onerror = () => { clearTimeout(timer); toast("连接失败"); };
+/**
+ * 开新局：房号由服务端挑（/api/newroom），一次 HTTP 请求定好房号与剧本。
+ * 以前是前端连开好几条 WebSocket 逐个试号，手机网络一抖就整个开局失败，
+ * 且失败后不重试——玩家只看到「连接失败」，再点也没反应。
+ */
+async function createRoom(scriptId, tries = 0) {
+  try {
+    const r = await fetch("/api/newroom?script=" + encodeURIComponent(scriptId), { cache: "no-store" });
+    const j = await r.json().catch(() => ({}));
+    if (!j.room) throw new Error(j.error || "no_room");
+    enterRoom(j.room, true);            // 服务端保证是空房，不必再警告
+  } catch (e) {
+    if (tries < 2) return setTimeout(() => createRoom(scriptId, tries + 1), 800);
+    toast("开局失败，请检查网络后再试一次");
+  }
 }
 
 $("btn-join").onclick = () => {
@@ -807,8 +817,8 @@ function renderActionBar() {
 
 /** 离开当前房间：清掉会话与 URL 令牌，回到选本页；带 scriptId 则直接开同一剧本的新局 */
 function leaveRoom(scriptId) {
-  try { if (S.ws) { S.ws.onclose = null; S.ws.close(); } } catch {}
-  S.ws = null; S.st = null; S.token = ""; S.room = ""; S.narration = []; S.connected = false;
+  closeSocket();
+  S.st = null; S.token = ""; S.room = ""; S.narration = [];
   try { localStorage.removeItem("jbs2"); } catch {}
   history.replaceState(null, "", location.pathname);
   banner("");

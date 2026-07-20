@@ -8,7 +8,7 @@
 
 export { RoomDO } from "./room";
 
-import { listScripts, HIDDEN_SCRIPTS } from "./skeleton";
+import { hasSkeleton, listScripts, HIDDEN_SCRIPTS } from "./skeleton";
 import { getContent } from "./content";
 
 export interface Env {
@@ -37,6 +37,33 @@ export default {
 
     if (url.pathname === "/health") {
       return Response.json({ ok: true, ts: Date.now() });
+    }
+
+    /**
+     * 开一局新的：服务端挑一个空房号并把剧本定下来，一次 HTTP 搞定。
+     * 以前是前端连开好几条 WebSocket 逐个试房号——手机在微信里网络一抖就全盘失败，
+     * 而且前端一旦收到 error 就彻底放弃，玩家只会看到「连接失败」，再点也没反应。
+     */
+    if (url.pathname === "/api/newroom") {
+      const script = url.searchParams.get("script") ?? "";
+      if (!hasSkeleton(script) || HIDDEN_SCRIPTS.has(script)) {
+        return Response.json({ error: "unknown_script" }, { status: 400 });
+      }
+      for (let i = 0; i < 12; i++) {
+        const code = String(Math.floor(1000 + Math.random() * 9000));
+        const stub = env.ROOM.get(env.ROOM.idFromName(code));
+        try {
+          const r = await stub.fetch(
+            `https://do/alloc?room=${code}&script=${encodeURIComponent(script)}`
+          );
+          if (r.ok && ((await r.json()) as { free?: boolean }).free) {
+            return Response.json({ room: code });
+          }
+        } catch {
+          /* 这个号不行就换下一个 */
+        }
+      }
+      return Response.json({ error: "no_free_room" }, { status: 503 });
     }
 
     // 可选剧本列表：只回公开元信息（标题/人数/时长），不含任何剧情

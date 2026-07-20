@@ -70,6 +70,22 @@ ok(bad.status === 400, "非法房号被拒: " + bad.status);
 const noUp = await fetch(HTTP + "/ws?room=" + R1);
 ok(noUp.status === 426, "合法房号但非 WS 请求被拒: " + noUp.status);
 
+// 开新局：服务端分配房号（取代前端连开多条 WS 试号的老做法）
+const nr = await fetch(HTTP + "/api/newroom?script=shop40").then((r) => r.json());
+ok(/^\d{4}$/.test(nr.room || ""), "开新局拿到 4 位房号: " + nr.room);
+const fresh = await conn(nr.room);
+ok(await waitFor(() => !!fresh.last("hello")), "分配到的房号可直接连上");
+ok(fresh.last("hello")?.room?.seatsTaken === 0, "分配到的一定是空房");
+ok(fresh.last("hello")?.room?.seatCount === 4, "剧本已按请求定为 shop40（4 人本）");
+
+const nr2 = await fetch(HTTP + "/api/newroom?script=shop40").then((r) => r.json());
+ok(nr2.room !== nr.room, "连续开局不会分到同一个房号");
+
+const badScript = await fetch(HTTP + "/api/newroom?script=nope");
+ok(badScript.status === 400, "未知剧本被拒: " + badScript.status);
+const hidden = await fetch(HTTP + "/api/newroom?script=fasttest");
+ok(hidden.status === 400, "隐藏的测试本不能被玩家开局: " + hidden.status);
+
 // 真实往返延迟（等 pong 事件，不用固定 sleep）
 function pingOnce(x) {
   return new Promise((res) => {
