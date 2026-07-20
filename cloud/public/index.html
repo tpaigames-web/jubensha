@@ -69,19 +69,18 @@
       <div class="grow"><b id="lobby-title">等待开局</b><div class="hint" id="lobby-script">—</div></div>
       <button class="icon-btn" id="btn-lobby-exit" title="离开房间">🚪</button>
     </div>
-    <div class="card" style="text-align:center">
-      <div class="hint">房号</div>
-      <div style="font-size:2.2em;font-weight:800;letter-spacing:8px;color:#d9b45b" id="lobby-room">----</div>
+    <!-- 面对面：把房号做成主角，念出来就能招呼人进来，不用发任何东西 -->
+    <div class="card room-card">
+      <div class="hint">房号 · 念给桌上的人听</div>
+      <div class="room-no" id="lobby-room">----</div>
       <div id="lobby-count" class="hint"></div>
+      <div class="join-how">
+        让他们打开 <b id="site-url">—</b>，输入这个房号就能进来。
+      </div>
+      <button id="btn-copy-site" class="btn ghost wide" style="margin-top:8px">📋 复制入座链接（发群里）</button>
     </div>
     <div class="card">
-      <h2>🔗 你的专属链接</h2>
-      <p class="hint" style="margin-bottom:8px">换设备、微信被杀后台后，打开这个链接就能回到你的席位。建议现在就发给自己。</p>
-      <div class="link-box" id="my-link">—</div>
-      <button id="btn-copy" class="btn ghost wide" style="margin-top:8px">📋 复制我的专属链接</button>
-    </div>
-    <div class="card">
-      <h2>👥 席位</h2>
+      <h2>👥 席位（<span id="lobby-count2">0</span>）</h2>
       <div id="lobby-seats"></div>
     </div>
     <div class="card">
@@ -90,6 +89,13 @@
       <div id="lobby-chars"></div>
       <button id="btn-random" class="btn ghost wide">🎲 随机分配给我</button>
     </div>
+    <!-- 换设备/被杀后台才用得上，平时不该占版面 -->
+    <details class="card">
+      <summary>🔗 我的专属链接（换设备时用）</summary>
+      <p class="hint" style="margin:8px 0">微信被杀后台、或者换一台设备时，打开这个链接就能回到你的席位。</p>
+      <div class="link-box" id="my-link">—</div>
+      <button id="btn-copy" class="btn ghost wide" style="margin-top:8px">📋 复制我的专属链接</button>
+    </details>
   </section>
 
   <!-- ========== 对局 ========== -->

@@ -372,6 +372,17 @@ $("btn-copy").onclick = async () => {
   }
 };
 
+// 入座链接：不带令牌的干净网址，可以放心发群里。带房号，点开直接进这一局。
+$("btn-copy-site").onclick = async () => {
+  const url = `${location.origin}${location.pathname}?room=${S.room}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    toast("已复制，发群里就行", true);
+  } catch {
+    toast(`复制失败，念房号 ${S.room} 给他们也一样`);
+  }
+};
+
 $("btn-random").onclick = () => send({ type: "character.pick", random: true });
 
 // ---------------- 渲染 ----------------
@@ -386,7 +397,12 @@ function render() {
 function renderLobby() {
   const st = S.st;
   $("lobby-room").textContent = st.room.roomId;
-  $("lobby-count").textContent = `${st.seats.length} / ${st.room.seatCount} 人已入座`;
+  const waiting = st.room.seatCount - st.seats.length;
+  $("lobby-count").textContent = waiting > 0
+    ? `${st.seats.length} / ${st.room.seatCount} 人已入座 · 还差 ${waiting} 个`
+    : `${st.seats.length} / ${st.room.seatCount} 人已入座 · 齐了`;
+  $("lobby-count2").textContent = String(st.seats.length);
+  $("site-url").textContent = location.host + location.pathname.replace(/\/$/, "");
   $("lobby-script").textContent = st.content[st.script.titleKey] || st.script.scriptId;
   renderSeats();
 
@@ -406,16 +422,24 @@ function renderLobby() {
   });
 }
 
+/** 已经看见过的席位。面对面开局时，要能看出「谁刚进来」 */
+const SEEN_SEATS = new Set();
 function renderSeats() {
   const st = S.st; if (!st) return;
-  const html = st.seats.map((s) => `
-    <div class="seat-row">
+  const fresh = [];
+  const html = st.seats.map((s) => {
+    const isNew = !SEEN_SEATS.has(s.seatId);
+    if (isNew) { SEEN_SEATS.add(s.seatId); if (s.seatId !== st.me.seatId) fresh.push(s.displayName); }
+    return `
+    <div class="seat-row ${isNew ? "just-in" : ""}">
       <span class="dot ${s.online ? "on" : ""}"></span>
       <span class="grow">${esc(s.displayName)}${s.seatId === st.me.seatId ? "（我）" : ""}</span>
       ${s.ready ? '<span class="tag ok">已就绪</span>' : ""}
       ${s.characterId ? `<span class="tag">${esc(st.content[(st.script.characters.find((c) => c.id === s.characterId) || {}).nameKey] || s.characterId)}</span>` : '<span class="tag">未选角</span>'}
-    </div>`).join("");
+    </div>`;
+  }).join("");
   const box = $("lobby-seats"); if (box) box.innerHTML = html;
+  if (fresh.length && st.room.phase === "lobby") toast(`${fresh.join("、")} 入座了`, true);
 }
 
 function renderGame() {

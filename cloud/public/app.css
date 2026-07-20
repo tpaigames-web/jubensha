@@ -63,6 +63,23 @@ input:focus { border-color:#d9b45b; }
 .progressbar > i { display:block; height:100%; background:#d9b45b; }
 
 /* 角色选择 */
+/* 大厅的房号：面对面开局时全靠念这个号，做成一眼能读给整桌人听的大小 */
+.room-card { text-align:center; }
+.room-no {
+  font-size:3.2em; font-weight:800; letter-spacing:.14em; color:#d9b45b;
+  line-height:1.15; margin:2px 0 4px;
+}
+.join-how { margin-top:10px; font-size:.86em; color:#a8a5b4; line-height:1.6; }
+.join-how b { color:#e8e6df; word-break:break-all; }
+/* 新人入座时闪一下，坐在一起时能看见「谁进来了」 */
+@keyframes seatIn { from { background:#3a3a1e; } to { background:transparent; } }
+.seat-row.just-in { animation:seatIn 1.6s ease-out; border-radius:8px; }
+
+details.card > summary { cursor:pointer; font-weight:700; list-style:none; }
+details.card > summary::-webkit-details-marker { display:none; }
+details.card > summary::before { content:"▸ "; color:#8b8898; }
+details.card[open] > summary::before { content:"▾ "; }
+
 /* 选本卡：标题 + 钩子 + 简介 + 分类，让人不点进去也知道这是个什么本 */
 .script-card {
   border:1px solid #33364a; border-radius:12px; padding:12px 14px;
