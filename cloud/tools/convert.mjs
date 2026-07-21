@@ -293,7 +293,9 @@ const skeleton = {
     players: old.characters.length,
     durationMin: acts.reduce((a, x) => a + x.durationMin, 0),
     type: "whodunit",
-    tags: EN.tags ?? old.tags ?? [],
+    // 「AI创作」不再作为标签：全站剧本都是 AI 写的，挂在每张卡上不区分任何东西。
+    // 署名改成在选本页整页说一次（见 public/index.html）。
+    tags: (EN.tags ?? old.tags ?? []).filter((t) => t !== "AI创作"),
     difficultyLabel: EN.difficultyLabel ?? difficultyLabel,
   },
   characters,

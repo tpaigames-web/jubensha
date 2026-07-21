@@ -254,7 +254,6 @@ async function loadScripts() {
 function renderScriptFilters() {
   const counts = [...new Set(SCRIPTS.all.map((s) => s.players))].sort((a, b) => a - b);
   const tags = [...new Set(SCRIPTS.all.flatMap((s) => s.tags || []))]
-    .filter((t) => t !== "AI创作")                       // 这个不是分类，是署名
     .sort((a, b) => {
       const ia = TAG_ORDER.indexOf(a), ib = TAG_ORDER.indexOf(b);
       return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
@@ -285,8 +284,7 @@ function renderScriptList() {
     (!SCRIPTS.tag || (s.tags || []).includes(SCRIPTS.tag)));
 
   $("script-list").innerHTML = list.map((s) => {
-    const tags = (s.tags || []).map((t) =>
-      `<span class="tag ${t === "AI创作" ? "" : "cat"}">${esc(t)}</span>`).join("");
+    const tags = (s.tags || []).map((t) => `<span class="tag cat">${esc(t)}</span>`).join("");
     return `<div class="script-card" data-script="${esc(s.scriptId)}">
       <div class="sc-head">
         <b>${esc(s.title)}</b>

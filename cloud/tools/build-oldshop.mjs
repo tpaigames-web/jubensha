@@ -829,7 +829,7 @@ const skeleton = {
   meta: {
     titleKey: "meta.title", subtitleKey: "meta.subtitle", blurbKey: "meta.blurb",
     players: 4, durationMin: 160, type: "linear_pve_reconstruction",
-    tags: ["情感", "还原", "现代", "AI创作"],
+    tags: ["情感", "还原", "现代"],
     difficultyLabel: "推理不难，情绪很重",
   },
   // 不配 BGM：三小时的底噪吵，也压念白。要加就在这里声明 audio，
