@@ -17,18 +17,21 @@
 | `gallery` 午夜美术馆 | 4 人 | ~65 分钟 | 指认凶手 · 赝品与遗嘱 |
 | `inn` 雾隐客栈 | 4 人 | ~65 分钟 | 指认凶手 · 古风雪夜 |
 | `party` 寿宴上的窃案 | 4 人 | ~65 分钟 | **欢乐新手本** · 无人死亡 |
-| `oldshop` 四十年 | 4 人 | ~160 分钟 | 情感还原 · 无凶手 |
+| `shop40` 四十年老店的最后一夜 | 4 人 | ~180 分钟 | 情感还原 · 八格时间线拼图 · 家庭向 |
 | `radio` 午夜电台 | 5 人 | ~65 分钟 | 指认凶手 · 硬核时间诡计 |
 | `xianmen` 宗门大比前夜 | 5 人 | ~65 分钟 | **欢乐修仙本** · 无人死亡 |
 | `huihun` 回魂夜 | 6 人 | ~65 分钟 | 指认凶手 · 民国灵异 |
-| `shop40` | 4 人 | ~180 分钟 | **在制品**：正式骨架已接入，正文待生成（`meta.draft` 为真，不展示） |
+| `oldshop` 四十年 | 4 人 | ~160 分钟 | **已退役**：与 `shop40` 是同一个设定，两本并排让人分不出来 |
 | `placeholder` / `fasttest` | — | — | 测试夹具，不对玩家展示 |
 
 `meta.draft: true` 的剧本不进选本列表、也不能被 `/api/newroom` 开局，但仍可用
-`/ws?room=XXXX&script=<id>` 直连自测。正文写完把这个字段去掉即可上线。
+`/ws?room=XXXX&script=<id>` 直连自测，已有房间也照常能玩。想让退役的本重新上架，
+把生成器里那一行 `draft: true` 删掉重新生成即可。
 
-`typhoon` 与 `shop40` 的正文分别在 `tools/build-typhoon.mjs` / `tools/build-shop40.mjs`，
-改剧情就改那两个文件再重新生成。**玩家不要读这两个文件。**
+正文所在处（**玩家不要读**）：
+`shop40` → `content/`（密封，见 SPOILER-WARNING.md）　
+`typhoon` → `tools/build-typhoon.mjs`　
+`oldshop` → `tools/build-oldshop.mjs`
 
 ---
 
@@ -140,9 +143,9 @@ node test-seat.mjs                     # 身份与恢复
 node test-engine.mjs                   # 可见性与运行时引擎
 node test-timer.mjs                    # DO Alarm 计时链路
 node test-chat.mjs                     # 阅读推进与聊天权限
-node test-oldshop.mjs                  # 《四十年》整局 + 防剧透全文搜索
+node test-oldshop.mjs                  # 已退役的《四十年》整局（顺带验证下架没把它弄坏）
 node test-typhoon.mjs                  # 《台风夜》整局 + 多数决结算
-node test-shop40-shape.mjs             # shop40 骨架结构验收（占位文案，验引擎不验剧情）
+node test-shop40-shape.mjs             # shop40 结构验收（验引擎与可见性，不验剧情）
 node test-all-scripts.mjs              # 全剧本冒烟：每个本都从入座跑到结束
 node test-clue.mjs                     # 搜证私藏与主动公开
 # 每条后面加 https://jubensha.tpaigames.workers.dev 即可打生产

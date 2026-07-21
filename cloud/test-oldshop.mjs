@@ -77,6 +77,11 @@ for (let i = 0; i < 4; i++) {
   P.push(c);
 }
 ok(st(P[0])?.script?.scriptId === "oldshop", "房间用的是 oldshop");
+// 这本已退役（meta.draft）：不进选本列表、不能用 /api/newroom 开局，
+// 但剧本本身完整保留，直连仍能跑完一整局。这条断言防的是「下架顺手把它弄坏了」。
+const listed = await fetch(HTTP + "/api/scripts").then((r) => r.json());
+ok(!listed.scripts.some((s) => s.scriptId === "oldshop"), "已退役：不出现在选本列表里");
+ok((await fetch(HTTP + "/api/newroom?script=oldshop")).status === 400, "已退役：不能被玩家开局");
 ok(st(P[0])?.room?.seatCount === 4, "席位数按 meta.players = 4");
 ok(st(P[0])?.script?.characters?.length === 4, "四个角色可选");
 

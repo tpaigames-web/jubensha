@@ -831,6 +831,16 @@ const skeleton = {
     players: 4, durationMin: 160, type: "linear_pve_reconstruction",
     tags: ["情感", "还原", "现代"],
     difficultyLabel: "推理不难，情绪很重",
+    /**
+     * 已退役。正式的 shop40 是同一个设定（四十年老店、店主刚走、卖还是留），
+     * 这本是等它的时候先顶上的替身，两本并排会让人分不出来。
+     *
+     * draft 只是下架：不进选本列表、不能用 /api/newroom 开局，
+     * 但剧本本身完整保留，已有房间照常能玩，
+     * 也仍可用 /ws?room=XXXX&script=oldshop 直连自测。
+     * 想让它重新上架，把这一行删掉重新生成即可。
+     */
+    draft: true,
   },
   // 不配 BGM：三小时的底噪吵，也压念白。要加就在这里声明 audio，
   // 素材可用 tools/gen-audio.py 生成（见 README）。
