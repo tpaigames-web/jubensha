@@ -1,0 +1,5 @@
+# 密封的创作中间产物：只有 QC 报告可以进版本库。
+# 注意必须写 content/* 而不是 content/——排除整个目录时 git 根本不会进去看，
+# 下面那条负向规则就永远不生效。
+content/*
+!content/QC-report.md

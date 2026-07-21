@@ -18,12 +18,30 @@ export interface ContentSource {
   resolveMany(keys: string[]): Record<string, string>;
 }
 
+/**
+ * 密封包解码。
+ *
+ * 文案包有两种形态：明文 JSON（引擎自带剧本），和 base64 密封（正式剧本包）。
+ * 密封不是为了防破解——包体本来就打进 Worker、外部下载不到——
+ * 而是为了防「在编辑器里手滑翻到正文」。委托人要作为玩家游玩，这一条比加密强度重要。
+ *
+ * 只做 base64、不做 gzip：resolve() 是同步的，而 Workers 里解 gzip 只有异步的
+ * DecompressionStream，为了几十 KB 的压缩率把整条解析链改成异步不划算。
+ */
+function decode(raw: string): string {
+  const s = raw.trim();
+  if (s.startsWith("{")) return s;                       // 明文包
+  const bin = atob(s);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);                // 中文必须按 UTF-8 还原
+}
+
 class JsonContentSource implements ContentSource {
   private map: Record<string, string>;
 
   constructor(raw: string) {
-    // 当前为明文占位包；换成加密包时在此处解密，上层无感
-    this.map = JSON.parse(raw) as Record<string, string>;
+    this.map = JSON.parse(decode(raw)) as Record<string, string>;
   }
 
   resolve(key: string): string | null {

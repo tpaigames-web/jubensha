@@ -63,4 +63,4 @@ export const PACK_TEXT: Record<string, string> = {
 
 /** 不对玩家展示的剧本：测试夹具 + meta.draft 的在制品。
  *  仍可用 /ws?room=XXXX&script=<id> 直连自测。 */
-export const HIDDEN_SCRIPTS = new Set<string>(["fasttest","placeholder","shop40"]);
+export const HIDDEN_SCRIPTS = new Set<string>(["fasttest","placeholder"]);

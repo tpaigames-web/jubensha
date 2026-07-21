@@ -29,8 +29,12 @@ function validate(id) {
   const packPath = join(dir, "content.pack");
   let pack = null;
   if (existsSync(packPath)) {
-    try { pack = JSON.parse(readFileSync(packPath, "utf8")); }
-    catch (e) { return bad(id, "content.pack 不是合法 JSON: " + e.message); }
+    // 文案包有两种形态：明文 JSON，和 base64 密封（防在编辑器里手滑翻到正文）。
+    // 这里与 src/content.ts 的 decode() 保持一致。
+    const raw = readFileSync(packPath, "utf8").trim();
+    const text = raw.startsWith("{") ? raw : Buffer.from(raw, "base64").toString("utf8");
+    try { pack = JSON.parse(text); }
+    catch (e) { return bad(id, "content.pack 解不出合法 JSON: " + e.message); }
   }
 
   // 基本结构

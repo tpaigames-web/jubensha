@@ -20,7 +20,13 @@
     "contentRating": "family_safe",
     "contentWarnings": [],
     "introNarrationKey": "nar.intro",
-    "draft": true
+    "tags": [
+      "情感",
+      "还原",
+      "现代",
+      "家庭"
+    ],
+    "difficultyLabel": "推理不难，情绪很重"
   },
   "phases": [
     {
@@ -747,49 +753,57 @@
             "id": "f1",
             "owner": "P1",
             "contentKey": "tl.frag.f1.full",
-            "summaryKey": "tl.frag.f1.summary"
+            "summaryKey": "tl.frag.f1.summary",
+            "slot": "s2"
           },
           {
             "id": "f2",
             "owner": "P1",
             "contentKey": "tl.frag.f2.full",
-            "summaryKey": "tl.frag.f2.summary"
+            "summaryKey": "tl.frag.f2.summary",
+            "slot": "s8"
           },
           {
             "id": "f3",
             "owner": "P2",
             "contentKey": "tl.frag.f3.full",
-            "summaryKey": "tl.frag.f3.summary"
+            "summaryKey": "tl.frag.f3.summary",
+            "slot": "s1"
           },
           {
             "id": "f4",
             "owner": "P2",
             "contentKey": "tl.frag.f4.full",
-            "summaryKey": "tl.frag.f4.summary"
+            "summaryKey": "tl.frag.f4.summary",
+            "slot": "s4"
           },
           {
             "id": "f5",
             "owner": "P3",
             "contentKey": "tl.frag.f5.full",
-            "summaryKey": "tl.frag.f5.summary"
+            "summaryKey": "tl.frag.f5.summary",
+            "slot": "s7"
           },
           {
             "id": "f6",
             "owner": "P3",
             "contentKey": "tl.frag.f6.full",
-            "summaryKey": "tl.frag.f6.summary"
+            "summaryKey": "tl.frag.f6.summary",
+            "slot": null
           },
           {
             "id": "f7",
             "owner": "P4",
             "contentKey": "tl.frag.f7.full",
-            "summaryKey": "tl.frag.f7.summary"
+            "summaryKey": "tl.frag.f7.summary",
+            "slot": "s3"
           },
           {
             "id": "f8",
             "owner": "P4",
             "contentKey": "tl.frag.f8.full",
-            "summaryKey": "tl.frag.f8.summary"
+            "summaryKey": "tl.frag.f8.summary",
+            "slot": "s5"
           }
         ],
         "decoyCount": 1,
@@ -797,8 +811,16 @@
           "enabled": true,
           "labelKey": "tl.discard.label"
         },
-        "solution": "SEALED",
-        "gapSlot": "SEALED",
+        "solution": {
+          "f1": "s2",
+          "f2": "s8",
+          "f3": "s1",
+          "f4": "s4",
+          "f5": "s7",
+          "f7": "s3",
+          "f8": "s5"
+        },
+        "gapSlot": "s6",
         "feedback": {
           "mode": "count_only",
           "note": "只回报正确归位数量，绝不回报哪一个正确",
