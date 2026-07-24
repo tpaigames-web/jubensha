@@ -52,7 +52,9 @@ console.log("\n【阅读】滚到底不算读完");
 for (const c of P) { c.send({ type: "read.progress", progress: 1 }); await wait(150); }
 await wait(2500);
 ok(P[0].last("snapshot.full")?.room?.phase === "reading", "四人进度都拉到100%，仍停在阅读阶段（不被跳过）");
-ok(P[0].last("snapshot.full")?.seats?.every((s) => s.readProgress === 1), "进度条仍如实显示100%");
+// 进度只影响进度条，走轻量的 seats.updated 广播，不再回推整份 snapshot.full
+// （否则玩家一滚动就把自己弹回顶部，读不了）。所以进度要从 seats.updated 里读。
+ok(P[0].last("seats.updated")?.seats?.every((s) => s.readProgress === 1), "进度条如实显示100%（走 seats.updated）");
 ok(P[0].last("snapshot.full")?.seats?.every((s) => !s.ready), "但没有人被判定为已就绪");
 
 console.log("\n【阅读】只有点了「我读完了」才推进");

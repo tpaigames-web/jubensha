@@ -48,9 +48,12 @@ function banner(msg, cls) {
   b.className = "banner " + (cls || "warn");
   b.style.display = "block";
 }
+let curView = null;
 function show(view) {
   for (const v of ["login", "room", "lobby", "game"]) $("v-" + v).style.display = v === view ? "block" : "none";
-  window.scrollTo(0, 0);
+  // 只有真正切换视图时才回到顶部。同一视图的重渲染（别人搜证、进度更新等每秒可能好几次）
+  // 绝不能滚动——否则玩家正读着剧本就被反复拉回开头，根本读不下去。
+  if (view !== curView) { curView = view; window.scrollTo(0, 0); }
 }
 function send(o) {
   if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o));
@@ -159,7 +162,8 @@ function handle(m) {
     }
 
     case "seats.updated":
-      if (S.st) { S.st.seats = m.seats; renderSeats(); }
+      // 只更新席位与进度条这两小块，绝不走 render() —— 否则又会触发视图重渲染
+      if (S.st) { S.st.seats = m.seats; renderSeats(); renderReadProgress(); }
       break;
 
     case "narration":
@@ -453,16 +457,29 @@ function renderGame() {
 }
 
 // --- 剧本页（含阅读进度上报） ---
+// 正文块只在内容真的变了（新幕开放/换本）时才重建。每次快照都重绘正文的话，
+// 不但闪烁，正读到一半的位置也会被打断——阅读体验的大忌。
+let scriptSig = "";
 function renderScript() {
   const st = S.st;
   const keys = st.script.myScriptKeys || [];
-  const body = keys.map((k, i) => `
-    <div class="card">
-      <h2>第${i + 1}幕 · 我的剧本</h2>
-      <div class="script-text">${esc(st.content[k] || "（本幕正文尚未开放）")}</div>
-    </div>`).join("");
+  const sig = st.script.scriptId + "|" + keys.map((k) => `${k}:${(st.content[k] || "").length}`).join("|");
+  if (sig !== scriptSig) {
+    scriptSig = sig;
+    const body = keys.map((k, i) => `
+      <div class="card">
+        <h2>第${i + 1}幕 · 我的剧本</h2>
+        <div class="script-text">${esc(st.content[k] || "（本幕正文尚未开放）")}</div>
+      </div>`).join("");
+    $("p-script").innerHTML = body + `<div class="card" id="read-progress"></div>`;
+  }
+  renderReadProgress();
+}
 
-  const meSeat = st.seats.find((s) => s.seatId === st.me.seatId) || {};
+// 进度条单独更新，不碰正文——别人的阅读进度变化只刷这一小块
+function renderReadProgress() {
+  const box = $("read-progress"); if (!box) return;
+  const st = S.st;
   const others = st.seats.map((s) => `
     <div class="seat-row">
       <span class="dot ${s.online ? "on" : ""}"></span>
@@ -470,11 +487,8 @@ function renderScript() {
       <div class="progressbar"><i style="width:${Math.round((s.readProgress || 0) * 100)}%"></i></div>
       ${s.ready ? '<span class="tag ok">就绪</span>' : `<span class="tag">${Math.round((s.readProgress || 0) * 100)}%</span>`}
     </div>`).join("");
-
-  $("p-script").innerHTML = body + `
-    <div class="card"><h2>📚 阅读进度</h2>${others}
-      <p class="hint" style="margin-top:8px">进度条只是给大家看看谁还在读。<b>必须每个人自己点下面的「我读完了」</b>才会推进——滚到底不算数，慢慢看。</p>
-    </div>`;
+  box.innerHTML = `<h2>📚 阅读进度</h2>${others}
+    <p class="hint" style="margin-top:8px">进度条只是给大家看看谁还在读。<b>必须每个人自己点下面的「我读完了」</b>才会推进——滚到底不算数，慢慢看。</p>`;
 }
 
 // 滚动上报阅读进度（节流）
@@ -486,7 +500,8 @@ window.addEventListener("scroll", () => {
   lastReport = now;
   const h = document.documentElement.scrollHeight - window.innerHeight;
   const p = h <= 0 ? 1 : Math.min(1, window.scrollY / h);
-  if (p > (S.st.me.readProgress || 0) + 0.02) send({ type: "read.progress", progress: p });
+  // 本地先记一笔，免得进度没实质变化时每 1.2 秒重复上报（服务端不再回推 me，本地得自己记）
+  if (p > (S.st.me.readProgress || 0) + 0.02) { S.st.me.readProgress = p; send({ type: "read.progress", progress: p }); }
 }, { passive: true });
 
 // --- 线索页 ---

@@ -112,15 +112,19 @@ await wait(400);
 ok(!!bro.c.last("seat.elsewhere"), "旧设备收到「席位已在其他设备打开」提示");
 ok(!!broPad.last("snapshot.full"), "新设备正常入座");
 
-// 两端都还能操作，且广播按 seatId 路由到该席位全部连接
+// 两端都还能操作，状态更新广播到该席位所在的所有连接。
+// 进度走 seats.updated（不再回推 snapshot.full，否则玩家一滚就被弹回顶部），
+// 所以从 seats 数组里按 seatId 取这个席位的进度。
+const broSeatId = broPad.last("snapshot.full").me.seatId;
+const progOf = (conn) => conn.last("seats.updated")?.seats?.find((s) => s.seatId === broSeatId)?.readProgress;
 bro.c.clear(); broPad.clear();
 broPad.send({ type: "read.progress", progress: 0.5 });
 await wait(400);
-ok(bro.c.last("snapshot.full")?.me?.readProgress === 0.5, "旧设备也收到本席位状态更新（按seatId广播）");
-ok(broPad.last("snapshot.full")?.me?.readProgress === 0.5, "新设备状态正确");
+ok(progOf(bro.c) === 0.5, "旧设备也收到本席位状态更新（seats.updated 广播到该席位全部连接）");
+ok(progOf(broPad) === 0.5, "新设备状态正确");
 bro.c.send({ type: "read.progress", progress: 0.8 });
 await wait(400);
-ok(broPad.last("snapshot.full")?.me?.readProgress === 0.8, "旧设备仍可正常操作（不强制踢线）");
+ok(progOf(broPad) === 0.8, "旧设备仍可正常操作（不强制踢线）");
 
 // ---- 6. 无房主依赖 ----
 console.log("\n【6】无房主概念");

@@ -958,12 +958,25 @@ export class RoomDO implements DurableObject {
           seat.privateState = { ...seat.privateState, wantRandom: false };
         });
 
-      case "read.progress":
-        return this.withSeat(ws, room, (seat) => {
-          const p = Number(msg.progress);
-          if (!Number.isFinite(p)) return "进度值非法";
-          seat.readProgress = Math.max(seat.readProgress, Math.min(1, Math.max(0, p)));
-        });
+      case "read.progress": {
+        // 进度上报单独走一条轻量路径，**不能**用 withSeat：后者每次都会 pushSnapshotAll，
+        // 而玩家一滚动就上报，等于自己把全量快照拉回来、被前端重渲染弹回顶部——读不下去。
+        // 进度只影响别人看到的进度条，用 seats.updated 广播即可，绝不回推 snapshot.full。
+        const att = this.attachmentOf(ws);
+        if (!att?.seatId) return;
+        const seats = await this.getSeats();
+        const seat = seats[att.seatId];
+        if (!seat) return;
+        const p = Number(msg.progress);
+        if (!Number.isFinite(p)) return;
+        const next = Math.max(seat.readProgress, Math.min(1, Math.max(0, p)));
+        if (next === seat.readProgress) return;   // 没变化就不广播，省流量
+        seat.readProgress = next;
+        seat.lastSeenAt = Date.now();
+        await this.putSeats(seats);
+        this.broadcastSeats(seats);
+        return;
+      }
 
       case "act.ready":
         return this.withSeat(ws, room, (seat) => {
