@@ -128,6 +128,9 @@ export interface SnapshotFull {
     characters: { id: string; nameKey: string; briefKey: string }[];
     actCount: number;
     locations: string[];
+    /** 地点 id → 中文名。外部剧本包的地点 id（loc.counter）本身不是文案 key，
+     *  中文名在 loc.counter.name，前端拿 id 当 key 会显示成英文，所以这里直接给中文。 */
+    locationNames: Record<string, string>;
     /** 其中对本席位仍有可搜线索的地点 */
     locationsAvailable: string[];
     /** 本幕各地点还剩几条我能搜到的线索，玩家据此分配次数 */

@@ -260,6 +260,7 @@ export class RoomDO implements DurableObject {
         actCount: sk.acts.length,
         /** 仅当前幕的可搜地点与配额 */
         locations: act ? act.locations : [],
+        locationNames: this.locationNames(sk, act ? act.locations : []),
         /** 其中「对我还有可搜线索」的子集：界面据此把搜空的地点置灰 */
         locationsAvailable: availableLocations(sk, vctx),
         locationRemaining: locationRemaining(sk, vctx),
@@ -327,6 +328,23 @@ export class RoomDO implements DurableObject {
       ballots: v.mode === "single_public" ? ballots : undefined,
       tally,
     };
+  }
+
+  /**
+   * 地点 id → 中文名。两种剧本格式都要覆盖：
+   *  - 外部包：顶层 locations 表，id=loc.counter，中文名在 loc.counter.name
+   *  - 简写本：location 字段本身就是文案 key，content[id] 即中文名
+   * 地点名是当前幕的公开信息，不涉及剧透。
+   */
+  private locationNames(sk: Skeleton, locs: string[]): Record<string, string> {
+    const src = getContent(sk.scriptId);
+    const table = new Map((sk.locations ?? []).map((l) => [l.id, l]));
+    const out: Record<string, string> = {};
+    for (const id of locs) {
+      const def = table.get(id);
+      out[id] = (def?.nameKey && src.resolve(def.nameKey)) || src.resolve(id) || id;
+    }
+    return out;
   }
 
   /**

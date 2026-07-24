@@ -449,11 +449,41 @@ function renderGame() {
   $("g-phase").textContent = st.room.phase === "playing"
     ? `第${st.room.actIndex + 1}幕 / ${st.script.actCount}`
     : phaseName(st.room.phase);
+  renderTodo();
   renderScript(); renderClue(); renderAct(); renderChat(); renderDM(); renderActionBar();
   const n = chatUnreadTotal();
   if (n > 0) { $("n-chat").textContent = n > 99 ? "99+" : n; $("n-chat").style.display = "inline-block"; }
   else $("n-chat").style.display = "none";
   tickTimer();
+}
+
+// 「现在该做什么」——按阶段告诉玩家下一步，点一下跳到对应页签
+function renderTodo() {
+  const st = S.st, bar = $("g-todo"); if (!bar) return;
+  const p = st.room.phase;
+  let text = "", goto = "";
+  if (p === "reading") {
+    text = "📖 读你的角色本，重点看里面的<b>【你今晚要做到的】</b>。读完点最下面的「我读完了」——所有人都点了才进下一幕。";
+    goto = "script";
+  } else if (p === "debrief") {
+    text = "🎬 到 <b>行动</b> 页，一段一段揭示复盘。"; goto = "act";
+  } else if (p === "ended") {
+    text = "🎬 本局结束。可以「再来一局」，或离开房间。"; goto = "act";
+  } else if (p === "playing") {
+    if (st.mechanic && !st.mechanic.complete) {
+      text = "🧩 到 <b>行动</b> 页，把你手上的碎片按时间摆到时间线上。"; goto = "act";
+    } else if (st.vote) {
+      text = "🗳️ 到 <b>行动</b> 页投票。"; goto = "act";
+    } else if ((st.script.locations || []).length) {
+      text = "🔍 到 <b>线索</b> 页搜证，把你查到的、手上藏着的事，挑时机说给大家听。想清楚了点最下面「我读完了」进下一幕。";
+      goto = "clue";
+    } else {
+      text = "💬 到 <b>讨论</b> 页，把手上的事说出来。想清楚了点最下面「我读完了」。"; goto = "chat";
+    }
+  }
+  bar.innerHTML = text ? `${text} <span class="todo-go">去这里 ›</span>` : "";
+  bar.style.display = text ? "block" : "none";
+  bar.onclick = goto ? () => gotoTab(goto) : null;
 }
 
 // --- 剧本页（含阅读进度上报） ---
@@ -504,6 +534,13 @@ window.addEventListener("scroll", () => {
   if (p > (S.st.me.readProgress || 0) + 0.02) { S.st.me.readProgress = p; send({ type: "read.progress", progress: p }); }
 }, { passive: true });
 
+// 地点中文名：优先服务端下发的映射，再退回把 id 当文案 key，最后退回 id
+function locName(loc) {
+  if (!loc) return "随身";
+  const st = S.st;
+  return (st.script.locationNames && st.script.locationNames[loc]) || st.content[loc] || loc;
+}
+
 // --- 线索页 ---
 function renderClue() {
   const st = S.st;
@@ -520,7 +557,7 @@ function renderClue() {
         const n = rem[l] ?? 0;
         const off = left <= 0 || !avail.has(l);
         const tail = avail.has(l) ? `剩余线索 ${n} 条` : "已搜空";
-        return `<button class="loc-btn" data-loc="${esc(l)}" ${off ? "disabled" : ""}>📍 ${esc(st.content[l] || l)}<small>${tail}</small></button>`;
+        return `<button class="loc-btn" data-loc="${esc(l)}" ${off ? "disabled" : ""}>📍 ${esc(locName(l))}<small>${tail}</small></button>`;
       }).join("")}</div>
     </div>`;
   }
@@ -528,7 +565,7 @@ function renderClue() {
   // 手上的（还没公开）和已经摊开的分两栏——摊不摊牌是这个游戏最要紧的选择
   const clueCard = (c) => `
     <div class="clue ${c.published ? "" : "private"}">
-      <div class="hint">📍 ${esc(st.content[c.location] || c.location || "随身")}
+      <div class="hint">📍 ${esc(locName(c.location))}
         ${c.private ? "· 🎭 角色专属" : ""}
         ${c.published && c.byName ? `· 由 ${esc(c.byName)} 公开` : ""}</div>
       ${c.titleKey && st.content[c.titleKey] ? `<div class="clue-t">${esc(st.content[c.titleKey])}</div>` : ""}
@@ -661,8 +698,10 @@ function fragText(f) {
 function fragBox(f, cls) {
   const decoy = f.revealedDecoy ? '<span class="tag warn">已确认是干扰项</span>' : "";
   const who = f.summaryOnly ? '<span class="tag">别人的·只有摘要</span>' : "";
-  return `<div class="${cls}" data-frag="${esc(f.fragId)}">
-    <div class="frag-meta">${who}${decoy}</div>${esc(fragText(f))}</div>`;
+  const picked = f.fragId === pickedFrag ? " picked" : "";
+  const hint = f.fragId === pickedFrag ? '<span class="tag ok">已选中 · 点下面的空格放进去</span>' : "";
+  return `<div class="${cls}${picked}" data-frag="${esc(f.fragId)}">
+    <div class="frag-meta">${who}${decoy}${hint}</div>${esc(fragText(f))}</div>`;
 }
 
 function renderMechanic(m) {
@@ -674,10 +713,11 @@ function renderMechanic(m) {
     const label = key(sl.labelKey) || sl.label;
     const tag = label ? `<span class="slot-t">${esc(label)}</span>` : "";
     const lock = sl.locked ? '<span class="tag ok">已确认</span>' : "";
+    const droppable = pickedFrag && !sl.frag && !sl.locked;
     const body = sl.frag
       ? `${lock}${esc(fragText(sl.frag))}`
-      : `<span class="hint">${label ? "还没人放" : `第 ${i + 1} 格（空）`}</span>`;
-    return `<div class="slot ${sl.frag ? "filled" : ""} ${sl.locked ? "locked" : ""}"
+      : `<span class="hint">${droppable ? "👆 点这里放入" : label ? "还没人放" : `第 ${i + 1} 格（空）`}</span>`;
+    return `<div class="slot ${sl.frag ? "filled" : ""} ${sl.locked ? "locked" : ""}${droppable ? " droppable" : ""}"
                  data-slot="${esc(sl.slotId)}">${tag}${body}</div>`;
   }).join("");
 
@@ -699,9 +739,9 @@ function renderMechanic(m) {
     <div class="timeline">${slots}</div>
     <div style="margin-top:12px">
       <div class="hint" style="margin-bottom:6px">
-        我的碎片（拖到格子里，或点一下再点格子）。<b>别人只看得到你这段的一行摘要——细节要你自己念出来。</b>
+        我的碎片：<b>点一枚选中，再点时间线上的空格放进去</b>。<b>别人只看得到你这段的一行摘要——细节要你自己念出来。</b>
       </div>
-      <div class="fraglist">${mine || '<span class="hint">已全部放置</span>'}</div>
+      <div class="fraglist" id="my-frags">${mine || '<span class="hint">已全部放置</span>'}</div>
     </div>
     ${s.discardEnabled ? `<div style="margin-top:12px">
       <div class="hint" style="margin-bottom:6px">${esc(key(s.discardLabelKey) || "弃置区（放不进时间线的那一段）")}</div>
@@ -715,77 +755,39 @@ function renderMechanic(m) {
 }
 
 let pickedFrag = null;
-const hitsEl = (el, ev) => {
-  const r = el.getBoundingClientRect();
-  return ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
-};
 function bindMechanic() {
   const box = $("mech-box"); if (!box) return;
   const mid = box.dataset.mid;
-  const ghost = $("drag-ghost");
   const dropZone = $("mech-discard");
-
   const act = (payload) => send({ type: "mechanic.action", mechanicId: mid, payload });
   const chk = $("mech-check");
   if (chk) chk.onclick = () => act({ op: "check" });
 
-  // 点击式（无障碍 & 兜底）
-  box.querySelectorAll("[data-frag]").forEach((el) => {
+  // 碎片是整段回忆，长文本不适合拖拽——改成点选式：
+  // 点一枚选中（再点取消），视图自动带到时间线，空格高亮，点空格即放入。
+  box.querySelectorAll("#my-frags [data-frag]").forEach((el) => {
     el.onclick = () => {
-      pickedFrag = el.dataset.frag;
-      box.querySelectorAll("[data-frag]").forEach((x) => x.classList.remove("dragging"));
-      el.classList.add("dragging");
-      toast("已选中，点一个空格放入");
+      const id = el.dataset.frag;
+      pickedFrag = pickedFrag === id ? null : id;
+      renderAct();                                  // 立即刷新选中态与空格高亮
+      if (pickedFrag) {
+        const tl = box.querySelector(".timeline");
+        if (tl) tl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     };
-    // 拖拽式：用 Pointer Events（HTML5 DnD 在移动端支持极差）
-    el.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      const fragId = el.dataset.frag;
-      ghost.textContent = el.textContent;
-      ghost.style.display = "block";
-      const move = (ev) => {
-        ghost.style.left = ev.clientX - 40 + "px";
-        ghost.style.top = ev.clientY - 24 + "px";
-        box.querySelectorAll(".slot").forEach((sl) => {
-          const r = sl.getBoundingClientRect();
-          const hit = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
-          sl.classList.toggle("hover", hit && !sl.classList.contains("filled"));
-        });
-      };
-      const up = (ev) => {
-        ghost.style.display = "none";
-        document.removeEventListener("pointermove", move);
-        document.removeEventListener("pointerup", up);
-        let target = null;
-        box.querySelectorAll(".slot").forEach((sl) => {
-          const r = sl.getBoundingClientRect();
-          if (ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) target = sl;
-          sl.classList.remove("hover");
-        });
-        if (target && !target.classList.contains("filled")) {
-          act({ op: "place", fragId, slot: target.dataset.slot });
-          pickedFrag = null;
-        } else if (dropZone && hitsEl(dropZone, ev)) {
-          act({ op: "discard", fragId });
-          pickedFrag = null;
-        }
-      };
-      document.addEventListener("pointermove", move, { passive: false });
-      document.addEventListener("pointerup", up);
-    });
   });
 
   box.querySelectorAll("[data-slot]").forEach((el) => {
     el.onclick = () => {
       const slot = el.dataset.slot;
       if (el.classList.contains("locked")) return toast("这一格已经确认过了");
-      if (el.classList.contains("filled")) { act({ op: "take", slot }); return; }
+      if (el.classList.contains("filled")) { act({ op: "take", slot }); return; }  // 点已放入的取回
       if (pickedFrag) { act({ op: "place", fragId: pickedFrag, slot }); pickedFrag = null; }
-      else toast("先点一枚自己的碎片");
+      else toast("先点一枚上面自己的碎片");
     };
   });
 
-  // 弃置区：点一下把选中的碎片丢进去；已在里面的点一下拿回来
+  // 弃置区：点里面的碎片拿回来；选中碎片后点空白处丢进去
   if (dropZone) {
     dropZone.onclick = (e) => {
       const on = e.target.closest("[data-frag]");
@@ -1021,17 +1023,18 @@ function tickTimer() {
 }
 
 // ---------------- 页签 ----------------
-document.querySelectorAll(".tab").forEach((el) => {
-  el.onclick = () => {
-    S.tab = el.dataset.tab;
-    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === el));
-    document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
-    $("p-" + S.tab).classList.add("active");
-    if (S.tab === "dm") { S.seen.dm = S.narration.length; $("n-dm").style.display = "none"; }
-    if (S.tab === "chat" && S.st) { markThreadSeen(); renderChat(); $("n-chat").style.display = "none"; }
-    window.scrollTo(0, 0);
-  };
-});
+function gotoTab(name) {
+  const el = document.querySelector(`.tab[data-tab="${name}"]`);
+  if (!el) return;
+  S.tab = name;
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === el));
+  document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+  $("p-" + name).classList.add("active");
+  if (name === "dm") { S.seen.dm = S.narration.length; $("n-dm").style.display = "none"; }
+  if (name === "chat" && S.st) { markThreadSeen(); renderChat(); $("n-chat").style.display = "none"; }
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll(".tab").forEach((el) => { el.onclick = () => gotoTab(el.dataset.tab); });
 
 // ---------------- 移动端加固 ----------------
 // 字号

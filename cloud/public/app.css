@@ -115,6 +115,15 @@ details.card[open] > summary::before { content:"▾ "; }
 .panel { display:none; }
 .panel.active { display:block; }
 
+/* 「现在该做什么」提示条 */
+.todo-bar {
+  background:#12262a; border:1px solid #2c5a63; color:#cfeef2;
+  border-radius:10px; padding:10px 13px; margin:2px 0 10px; line-height:1.65;
+  font-size:.92em; cursor:pointer;
+}
+.todo-bar b { color:#9fe6ef; }
+.todo-go { color:#5ecfda; font-weight:700; white-space:nowrap; }
+
 /* 正文 */
 .script-text { white-space:pre-wrap; line-height:1.9; }
 .narration { border-left:3px solid #d9b45b; background:#1e1b12; padding:10px 12px; border-radius:0 10px 10px 0; margin-bottom:10px; }
@@ -140,16 +149,18 @@ details.card[open] > summary::before { content:"▾ "; }
 .vote-opt.sel { border-color:#d9b45b; background:#26221580; }
 .rank-num { background:#d9b45b; color:#1b1405; border-radius:50%; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:.8em; }
 
-/* 机制：时间线拖拽 */
+/* 机制：时间线（点选式，不拖拽） */
 .timeline { display:flex; flex-direction:column; gap:10px; }
 .slot {
   min-height:56px; border:2px dashed #3a3d52; border-radius:12px;
   display:flex; align-items:center; gap:10px; color:#8b8898; line-height:1.55;
-  background:#171923; padding:10px 12px; touch-action:none;
+  background:#171923; padding:10px 12px; cursor:pointer;
 }
 .slot.filled { border-style:solid; border-color:#d9b45b; background:#26221580; color:#e8e6df; }
-.slot.hover { border-color:#5ecfda; background:#12262a; }
 .slot.locked { border-color:#4f9d69; background:#13251a; }
+/* 选中碎片后，能放的空格高亮呼吸，一眼看到往哪儿点 */
+.slot.droppable { border-color:#5ecfda; background:#12262a; color:#9fe6ef; animation:slotPulse 1.1s ease-in-out infinite; }
+@keyframes slotPulse { 0%,100%{ box-shadow:0 0 0 0 #5ecfda44; } 50%{ box-shadow:0 0 0 4px #5ecfda22; } }
 /* 碎片是整段回忆，不是标签——竖排、左对齐、可换行 */
 .fraglist { display:flex; flex-direction:column; gap:10px; }
 .frag-meta { display:flex; gap:6px; margin-bottom:6px; }
@@ -165,14 +176,10 @@ details.card[open] > summary::before { content:"▾ "; }
   background:linear-gradient(135deg,#d9b45b,#c1922f); color:#1b1405; font-weight:600;
   border-radius:10px; padding:12px 14px; min-height:48px; width:100%;
   display:block; line-height:1.6; text-align:left;
-  cursor:grab; touch-action:none; user-select:none;
+  cursor:pointer; user-select:none; border:2px solid transparent;
 }
-.frag.dragging { opacity:.5; }
-#drag-ghost {
-  position:fixed; z-index:200; pointer-events:none; opacity:.9;
-  background:linear-gradient(135deg,#d9b45b,#c1922f); color:#1b1405;
-  font-weight:700; border-radius:10px; padding:12px 14px; display:none;
-}
+/* 选中的碎片：深色描边 + 微微放大，跟空格的青色高亮呼应 */
+.frag.picked { border-color:#0d3b40; box-shadow:0 0 0 3px #5ecfda88; }
 
 /* 底部操作条 */
 .actionbar {
